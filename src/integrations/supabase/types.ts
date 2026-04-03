@@ -14,7 +14,36 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      cards: {
+        Row: {
+          ai_summary: Json | null
+          created_at: string
+          id: string
+          read_time: number | null
+          tags: string[] | null
+          title: string | null
+          url: string
+        }
+        Insert: {
+          ai_summary?: Json | null
+          created_at?: string
+          id?: string
+          read_time?: number | null
+          tags?: string[] | null
+          title?: string | null
+          url: string
+        }
+        Update: {
+          ai_summary?: Json | null
+          created_at?: string
+          id?: string
+          read_time?: number | null
+          tags?: string[] | null
+          title?: string | null
+          url?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
