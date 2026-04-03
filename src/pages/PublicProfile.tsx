@@ -1,6 +1,7 @@
 import { useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { collection, query, where, getDocs } from "firebase/firestore";
+import { db } from "@/integrations/firebase/client";
 import KnowledgeCard from "@/components/KnowledgeCard";
 import { Database, Loader2, User } from "lucide-react";
 
@@ -10,13 +11,14 @@ const PublicProfile = () => {
   const { data: profile, isLoading: profileLoading } = useQuery({
     queryKey: ["profile", username],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("profiles")
-        .select("*")
-        .eq("username", username)
-        .single();
-      if (error) throw error;
-      return data;
+      if (!username) return null;
+      const q = query(
+        collection(db, "profiles"),
+        where("username", "==", username)
+      );
+      const snap = await getDocs(q);
+      const doc = snap.docs[0];
+      return doc ? { id: doc.id, ...doc.data() } : null;
     },
     enabled: !!username,
   });
@@ -24,14 +26,10 @@ const PublicProfile = () => {
   const { data: cards, isLoading: cardsLoading } = useQuery({
     queryKey: ["public-cards", profile?.user_id],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("cards")
-        .select("*")
-        .eq("user_id", profile!.user_id)
-        .eq("is_public", true)
-        .order("created_at", { ascending: false });
-      if (error) throw error;
-      return data;
+      if (!profile?.user_id) return [];
+      const resp = await fetch(`/api/cards/public?user_id=${encodeURIComponent(profile.user_id)}`);
+      if (!resp.ok) throw new Error(`Failed to load public cards (${resp.status})`);
+      return resp.json();
     },
     enabled: !!profile?.user_id,
   });

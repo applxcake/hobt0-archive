@@ -1,5 +1,4 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import KnowledgeCard from "@/components/KnowledgeCard";
 import AddCardDialog from "@/components/AddCardDialog";
@@ -15,34 +14,32 @@ const Index = () => {
   const queryClient = useQueryClient();
 
   const { data: cards, isLoading } = useQuery({
-    queryKey: ["cards", user?.id],
+    queryKey: ["cards", user?.uid],
     queryFn: async () => {
       if (!user) return [];
-      const { data, error } = await supabase
-        .from("cards")
-        .select("*")
-        .eq("user_id", user.id)
-        .order("created_at", { ascending: false });
-      if (error) throw error;
-      return data;
+      const resp = await fetch(`/api/cards?user_id=${encodeURIComponent(user.uid)}`);
+      if (!resp.ok) throw new Error(`Failed to load cards (${resp.status})`);
+      return resp.json();
     },
     enabled: !authLoading,
   });
 
   const { data: profile } = useQuery({
-    queryKey: ["my-profile", user?.id],
+    queryKey: ["my-profile", user?.uid],
     queryFn: async () => {
-      const { data } = await supabase
-        .from("profiles")
-        .select("username")
-        .eq("user_id", user!.id)
-        .single();
-      return data;
+      if (!user) return null;
+      const q = query(
+        collection(db, "profiles"),
+        where("user_id", "==", user.uid)
+      );
+      const snap = await getDocs(q);
+      const doc = snap.docs[0];
+      return doc ? { id: doc.id, ...doc.data() } : null;
     },
     enabled: !!user,
   });
 
-  const refetch = () => queryClient.invalidateQueries({ queryKey: ["cards", user?.id] });
+  const refetch = () => queryClient.invalidateQueries({ queryKey: ["cards", user?.uid] });
 
   const shareArchive = () => {
     if (profile?.username) {

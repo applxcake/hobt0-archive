@@ -1,7 +1,5 @@
 import { useState } from "react";
 import { ExternalLink, Clock, Calendar, Lock, Unlock, MoreVertical, Pencil, Trash2, Share2 } from "lucide-react";
-import { Tables } from "@/integrations/supabase/types";
-import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import {
   DropdownMenu,
@@ -11,7 +9,20 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 
-type Card = Tables<"cards">;
+type Card = {
+  id: string;
+  url: string;
+  title?: string | null;
+  summary_text?: string | null;
+  ai_summary?: unknown;
+  tags?: string[] | null;
+  created_at: string | { seconds: number; nanoseconds: number };
+  thumbnail_url?: string | null;
+  embed_code?: string | null;
+  embed_type?: string | null;
+  is_public?: boolean;
+  read_time?: number | null;
+};
 
 interface KnowledgeCardProps {
   card: Card;
@@ -30,9 +41,21 @@ const isImageUrl = (url: string): boolean => {
 };
 
 const KnowledgeCard = ({ card, index, isOwner = false, onUpdate }: KnowledgeCardProps) => {
-  const summary = Array.isArray(card.ai_summary) ? card.ai_summary as string[] : [];
+  const summaryParagraph =
+    typeof card.summary_text === "string" && card.summary_text.trim()
+      ? card.summary_text.trim()
+      : Array.isArray(card.ai_summary) && card.ai_summary.length
+        ? String(card.ai_summary[0] ?? "").trim()
+        : "";
+  const summary = Array.isArray(card.ai_summary) ? (card.ai_summary as string[]) : [];
   const tags = card.tags ?? [];
-  const date = new Date(card.created_at).toLocaleDateString("en-US", {
+  const createdAtDate =
+    typeof card.created_at === "object" &&
+    card.created_at &&
+    "seconds" in card.created_at
+      ? new Date((card.created_at.seconds as number) * 1000)
+      : new Date(card.created_at as string);
+  const date = createdAtDate.toLocaleDateString("en-US", {
     month: "short",
     day: "numeric",
   });
@@ -44,33 +67,56 @@ const KnowledgeCard = ({ card, index, isOwner = false, onUpdate }: KnowledgeCard
   const thumbnailUrl = card.thumbnail_url as string | null;
 
   const togglePrivacy = async () => {
-    const { error } = await supabase
-      .from("cards")
-      .update({ is_public: !card.is_public })
-      .eq("id", card.id);
-    if (error) {
-      toast({ title: "Error", description: error.message, variant: "destructive" });
-    } else {
+    try {
+      const resp = await fetch(`/api/cards/${card.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ is_public: !card.is_public }),
+      });
+      if (!resp.ok) {
+        const err = await resp.json().catch(() => ({}));
+        throw new Error(err?.error || `Failed to update card (${resp.status})`);
+      }
       toast({ title: card.is_public ? "Card set to private" : "Card set to public" });
       onUpdate?.();
+    } catch (error: any) {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
     }
   };
 
   const deleteCard = async () => {
     setIsDeleting(true);
-    const { error } = await supabase.from("cards").delete().eq("id", card.id);
-    if (error) {
-      toast({ title: "Error", description: error.message, variant: "destructive" });
-    } else {
+    try {
+      const resp = await fetch(`/api/cards/${card.id}`, { method: "DELETE" });
+      if (!resp.ok) {
+        const err = await resp.json().catch(() => ({}));
+        throw new Error(err?.error || `Failed to delete card (${resp.status})`);
+      }
       toast({ title: "Card deleted" });
       onUpdate?.();
+    } catch (error: any) {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
     }
     setIsDeleting(false);
   };
 
   const shareCard = () => {
-    navigator.clipboard.writeText(card.url);
-    toast({ title: "URL copied to clipboard" });
+    const embedValue =
+      card.embed_type === "youtube" && youtubeId
+        ? `https://www.youtube.com/embed/${youtubeId}`
+        : card.embed_code || "N/A";
+    const text = [
+      `Title: ${card.title || card.url}`,
+      `URL: ${card.url}`,
+      summaryParagraph ? `Summary: ${summaryParagraph}` : "",
+      `Embed Type: ${card.embed_type || "none"}`,
+      `Embed: ${embedValue}`,
+    ]
+      .filter(Boolean)
+      .join("\n\n");
+
+    navigator.clipboard.writeText(text);
+    toast({ title: "Card details copied", description: "Copied title, URL, summary and embed details." });
   };
 
   return (
@@ -161,16 +207,11 @@ const KnowledgeCard = ({ card, index, isOwner = false, onUpdate }: KnowledgeCard
           </div>
         </div>
 
-        {/* Summary bullets */}
-        {summary.length > 0 && (
-          <ul className="space-y-1.5 mb-3">
-            {summary.map((point, i) => (
-              <li key={i} className="text-xs text-muted-foreground flex items-start gap-2">
-                <span className="text-primary mt-0.5 shrink-0">›</span>
-                <span className="leading-relaxed">{String(point)}</span>
-              </li>
-            ))}
-          </ul>
+        {/* One-paragraph summary */}
+        {summaryParagraph && (
+          <p className="text-xs text-muted-foreground leading-relaxed mb-3">
+            {summaryParagraph}
+          </p>
         )}
 
         {/* Tags */}

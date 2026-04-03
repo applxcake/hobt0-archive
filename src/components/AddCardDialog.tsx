@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Plus, Loader2 } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import {
   Dialog,
@@ -21,22 +21,90 @@ const AddCardDialog = ({ onCardAdded }: AddCardDialogProps) => {
   const [url, setUrl] = useState("");
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
+  const { user } = useAuth();
+
+  const fetchWithTimeout = async (
+    input: RequestInfo | URL,
+    init: RequestInit = {},
+    timeoutMs = 8000
+  ) => {
+    const controller = new AbortController();
+    const timeoutId = window.setTimeout(() => controller.abort(), timeoutMs);
+    try {
+      return await fetch(input, { ...init, signal: controller.signal });
+    } finally {
+      window.clearTimeout(timeoutId);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!url.trim()) return;
+    if (!user) {
+      toast({ title: "Sign in required", description: "Please sign in to add cards.", variant: "destructive" });
+      return;
+    }
 
     setLoading(true);
     try {
-      const { data, error } = await supabase.functions.invoke("process-url", {
-        body: { url: url.trim() },
-      });
+      const requestBody = JSON.stringify({ url: url.trim() });
+      let resp: Response | null = null;
+      let lastError: string | null = null;
 
-      if (error) throw error;
+      // Single fast attempt to keep archive action responsive.
+      try {
+        const candidate = await fetchWithTimeout("/api/process-url", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: requestBody,
+        });
+
+        if (candidate.ok) {
+          resp = candidate;
+        } else {
+          const err = await candidate.json().catch(() => ({}));
+          lastError = err?.error || `Failed to process URL (${candidate.status})`;
+        }
+      } catch (error: any) {
+        lastError = error?.name === "AbortError"
+          ? "URL processing timed out"
+          : error?.message || "Failed to process URL";
+      }
+
+      const data = resp ? await resp.json() : null;
+      const fallbackSummary = "Summary unavailable right now. Open the source URL for details.";
+
+      const saveResp = await fetchWithTimeout("/api/cards", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          url: url.trim(),
+          title: data?.title || url.trim(),
+          summary_text:
+            typeof data?.summary_text === "string" && data.summary_text.trim()
+              ? data.summary_text.trim()
+              : fallbackSummary,
+          ai_summary:
+            Array.isArray(data?.ai_summary) && data.ai_summary.length
+              ? data.ai_summary
+              : [fallbackSummary],
+          tags: Array.isArray(data?.tags) ? data.tags : [],
+          read_time: typeof data?.read_time === "number" ? data.read_time : null,
+          thumbnail_url: data?.thumbnail_url ?? null,
+          embed_code: data?.embed_code ?? null,
+          embed_type: data?.embed_type ?? null,
+          user_id: user.uid,
+          is_public: false,
+        }),
+      });
+      if (!saveResp.ok) {
+        const err = await saveResp.json().catch(() => ({}));
+        throw new Error(err?.error || `Failed to save card (${saveResp.status})`);
+      }
 
       toast({
         title: "Card archived",
-        description: data?.title || "URL processed successfully",
+        description: resp ? data?.title || url.trim() : "Saved without AI summary (processing timed out).",
       });
       setUrl("");
       setOpen(false);
