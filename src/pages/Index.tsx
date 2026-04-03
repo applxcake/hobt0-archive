@@ -1,23 +1,65 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 import KnowledgeCard from "@/components/KnowledgeCard";
 import AddCardDialog from "@/components/AddCardDialog";
-import { Database, Loader2 } from "lucide-react";
-
-const fetchCards = async () => {
-  const { data, error } = await supabase
-    .from("cards")
-    .select("*")
-    .order("created_at", { ascending: false });
-  if (error) throw error;
-  return data;
-};
+import { Database, Loader2, Settings, LogIn, Share2 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { Button } from "@/components/ui/button";
+import { useToast } from "@/hooks/use-toast";
 
 const Index = () => {
-  const { data: cards, isLoading, refetch } = useQuery({
-    queryKey: ["cards"],
-    queryFn: fetchCards,
+  const { user, loading: authLoading } = useAuth();
+  const navigate = useNavigate();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+
+  const { data: cards, isLoading } = useQuery({
+    queryKey: ["cards", user?.id],
+    queryFn: async () => {
+      if (!user) return [];
+      const { data, error } = await supabase
+        .from("cards")
+        .select("*")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return data;
+    },
+    enabled: !authLoading,
   });
+
+  const { data: profile } = useQuery({
+    queryKey: ["my-profile", user?.id],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("profiles")
+        .select("username")
+        .eq("user_id", user!.id)
+        .single();
+      return data;
+    },
+    enabled: !!user,
+  });
+
+  const refetch = () => queryClient.invalidateQueries({ queryKey: ["cards", user?.id] });
+
+  const shareArchive = () => {
+    if (profile?.username) {
+      navigator.clipboard.writeText(`${window.location.origin}/u/${profile.username}`);
+      toast({ title: "Copied!", description: "Public archive URL copied to clipboard" });
+    } else {
+      toast({ title: "Set a username first", description: "Go to Settings to set your public handle", variant: "destructive" });
+    }
+  };
+
+  if (authLoading) {
+    return (
+      <div className="min-h-screen scanline flex items-center justify-center">
+        <Loader2 className="w-5 h-5 text-primary animate-spin" />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen scanline">
@@ -40,16 +82,41 @@ const Index = () => {
             </div>
           </div>
 
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3">
             <span className="text-[10px] uppercase tracking-wider text-muted-foreground">
               {cards?.length ?? 0} nodes
             </span>
-            <AddCardDialog onCardAdded={refetch} />
+            {user ? (
+              <>
+                <Button variant="ghost" size="sm" onClick={shareArchive} className="gap-1.5 text-xs">
+                  <Share2 className="w-3.5 h-3.5" />
+                </Button>
+                <AddCardDialog onCardAdded={refetch} />
+                <Button variant="ghost" size="sm" onClick={() => navigate("/settings")}>
+                  <Settings className="w-4 h-4" />
+                </Button>
+              </>
+            ) : (
+              <Button size="sm" onClick={() => navigate("/login")} className="gap-1.5 text-xs uppercase tracking-wider">
+                <LogIn className="w-3.5 h-3.5" />
+                Sign In
+              </Button>
+            )}
           </div>
         </header>
 
         {/* Content */}
-        {isLoading ? (
+        {!user ? (
+          <div className="flex flex-col items-center justify-center py-32 text-center">
+            <div className="w-12 h-12 rounded-sm bg-secondary border border-border flex items-center justify-center mb-4">
+              <Database className="w-5 h-5 text-muted-foreground" />
+            </div>
+            <p className="text-sm text-muted-foreground mb-1">Sign in to start archiving</p>
+            <p className="text-xs text-muted-foreground/60">
+              Build your personal knowledge graph
+            </p>
+          </div>
+        ) : isLoading ? (
           <div className="flex items-center justify-center py-32">
             <Loader2 className="w-5 h-5 text-primary animate-spin" />
           </div>
@@ -67,7 +134,7 @@ const Index = () => {
           <div className="columns-1 sm:columns-2 lg:columns-3 gap-4 space-y-4">
             {cards.map((card, i) => (
               <div key={card.id} className="break-inside-avoid">
-                <KnowledgeCard card={card} index={i} />
+                <KnowledgeCard card={card} index={i} isOwner={true} onUpdate={refetch} />
               </div>
             ))}
           </div>
