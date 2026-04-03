@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
-import { lovable } from "@/integrations/lovable/index";
+import { auth, googleProvider } from "@/integrations/firebase/client";
+import { signInWithEmailAndPassword, createUserWithEmailAndPassword, signInWithPopup } from "firebase/auth";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -27,19 +27,13 @@ const Login = () => {
     setLoading(true);
     try {
       if (isSignUp) {
-        const { error } = await supabase.auth.signUp({
-          email,
-          password,
-          options: { emailRedirectTo: window.location.origin },
-        });
-        if (error) throw error;
+        await createUserWithEmailAndPassword(auth, email, password);
         toast({
-          title: "Check your email",
-          description: "We sent you a confirmation link to verify your account.",
+          title: "Account created",
+          description: "You are now signed in.",
         });
       } else {
-        const { error } = await supabase.auth.signInWithPassword({ email, password });
-        if (error) throw error;
+        await signInWithEmailAndPassword(auth, email, password);
         navigate("/");
       }
     } catch (err: any) {
@@ -56,17 +50,8 @@ const Login = () => {
   const handleGoogleAuth = async () => {
     setLoading(true);
     try {
-      const result = await lovable.auth.signInWithOAuth("google", {
-        redirect_uri: window.location.origin,
-      });
-      if (result.error) {
-        toast({
-          title: "Error",
-          description: result.error instanceof Error ? result.error.message : "Google sign-in failed",
-          variant: "destructive",
-        });
-      }
-      if (result.redirected) return;
+      await signInWithPopup(auth, googleProvider);
+      navigate("/");
     } catch (err: any) {
       toast({
         title: "Error",

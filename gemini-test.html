@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Gemini API Test</title>
+  <style>
+    body { font-family: monospace; background: #0a0a0a; color: #00ff00; padding: 20px; }
+    .log { white-space: pre-wrap; margin: 10px 0; padding: 10px; background: #111; border: 1px solid #333; }
+    .error { color: #ff4444; }
+    .success { color: #44ff44; }
+    input, button { background: #222; color: #0f0; border: 1px solid #0f0; padding: 10px; margin: 5px; font-family: monospace; }
+    button:hover { background: #0f0; color: #000; cursor: pointer; }
+  </style>
+</head>
+<body>
+  <h2>Gemini API Test Tool</h2>
+  <input type="text" id="apiKey" placeholder="Enter Gemini API Key" style="width: 300px;">
+  <input type="text" id="url" placeholder="URL to summarize" value="https://en.wikipedia.org/wiki/Artificial_intelligence" style="width: 300px;">
+  <button onclick="runTest()">Test API</button>
+  <button onclick="clearLog()">Clear</button>
+  
+  <div id="output"></div>
+
+  <script>
+    const GEMINI_MODEL = "gemini-2.0-flash";
+    
+    function log(msg, type = 'info') {
+      const output = document.getElementById('output');
+      const div = document.createElement('div');
+      div.className = 'log ' + type;
+      div.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
+      output.appendChild(div);
+    }
+    
+    function clearLog() {
+      document.getElementById('output').innerHTML = '';
+    }
+
+    async function runTest() {
+      const apiKey = document.getElementById('apiKey').value;
+      const url = document.getElementById('url').value;
+      
+      if (!apiKey) {
+        log('ERROR: No API key provided', 'error');
+        return;
+      }
+      
+      log('=== Starting Gemini API Test ===');
+      log(`Testing URL: ${url}`);
+      
+      try {
+        // Fetch page content
+        log('Fetching page content via Jina Reader...');
+        let pageContent = '';
+        try {
+          const jinaRes = await fetch(`https://r.jina.ai/${url}`, {
+            headers: { Accept: 'text/plain' },
+          });
+          if (jinaRes.ok) {
+            pageContent = (await jinaRes.text()).slice(0, 5000);
+            log(`Fetched ${pageContent.length} chars of content`, 'success');
+          } else {
+            log(`Jina fetch failed: ${jinaRes.status}`, 'error');
+          }
+        } catch (e) {
+          log(`Jina error: ${e.message}`, 'error');
+        }
+
+        const systemPrompt = 'Return ONLY valid JSON with keys: "summary_text" (2-4 concise sentences), "tags" (array of 3 lowercase tags), "read_time" (integer minutes). Analyze the webpage content provided.';
+        
+        const contentToAnalyze = pageContent 
+          ? `URL: ${url}\n\nPage Content:\n${pageContent}`
+          : `URL: ${url}`;
+
+        const payload = {
+          contents: [
+            {
+              role: "user",
+              parts: [{ text: `${systemPrompt}\n\n${contentToAnalyze}` }],
+            },
+          ],
+          generationConfig: {
+            responseMimeType: "application/json",
+            temperature: 0.3,
+          },
+        };
+
+        log('Sending request to Gemini API...');
+        log(`Model: ${GEMINI_MODEL}`);
+        
+        const aiResp = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${apiKey}`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+          }
+        );
+
+        log(`Response status: ${aiResp.status}`);
+        
+        if (!aiResp.ok) {
+          const errorText = await aiResp.text();
+          log(`API ERROR:\n${errorText}`, 'error');
+          return;
+        }
+        
+        const aiData = await aiResp.json();
+        log(`Raw response:\n${JSON.stringify(aiData, null, 2)}`);
+        
+        const text = aiData?.candidates?.[0]?.content?.parts?.[0]?.text;
+        if (!text) {
+          log('ERROR: No text in response', 'error');
+          log(`Full response: ${JSON.stringify(aiData, null, 2)}`, 'error');
+          return;
+        }
+        
+        log(`Text content:\n${text}`, 'success');
+        
+        try {
+          const parsed = JSON.parse(text);
+          log(`SUCCESS! Parsed result:\n${JSON.stringify(parsed, null, 2)}`, 'success');
+        } catch (parseErr) {
+          log(`JSON PARSE ERROR: ${parseErr.message}`, 'error');
+          log(`Text that failed to parse: ${text}`, 'error');
+        }
+      } catch (err) {
+        log(`FETCH ERROR: ${err.message}`, 'error');
+      }
+      
+      log('=== Test Complete ===');
+    }
+  </script>
+</body>
+</html>

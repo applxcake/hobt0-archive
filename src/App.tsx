@@ -9,6 +9,8 @@ import Login from "./pages/Login";
 import Settings from "./pages/Settings";
 import PublicProfile from "./pages/PublicProfile";
 import NotFound from "./pages/NotFound";
+import AuthCallback from "./pages/AuthCallback";
+import GeminiTest from "./test/GeminiTest";
 
 const queryClient = new QueryClient();
 
@@ -22,8 +24,11 @@ const App = () => (
           <Routes>
             <Route path="/" element={<Index />} />
             <Route path="/login" element={<Login />} />
+            <Route path="/auth/v1/callback" element={<AuthCallback />} />
+            <Route path="/auth/v1/callback/*" element={<AuthCallback />} />
             <Route path="/settings" element={<Settings />} />
             <Route path="/u/:username" element={<PublicProfile />} />
+            <Route path="/test/gemini" element={<GeminiTest />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>

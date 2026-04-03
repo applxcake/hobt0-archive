@@ -8,7 +8,7 @@ import { Database, Loader2, User } from "lucide-react";
 const PublicProfile = () => {
   const { username } = useParams<{ username: string }>();
 
-  const { data: profile, isLoading: profileLoading } = useQuery({
+  const { data: profile, isLoading: profileLoading } = useQuery<any>({
     queryKey: ["profile", username],
     queryFn: async () => {
       if (!username) return null;
@@ -23,13 +23,17 @@ const PublicProfile = () => {
     enabled: !!username,
   });
 
-  const { data: cards, isLoading: cardsLoading } = useQuery({
+  const { data: cards, isLoading: cardsLoading } = useQuery<any[]>({
     queryKey: ["public-cards", profile?.user_id],
     queryFn: async () => {
       if (!profile?.user_id) return [];
-      const resp = await fetch(`/api/cards/public?user_id=${encodeURIComponent(profile.user_id)}`);
-      if (!resp.ok) throw new Error(`Failed to load public cards (${resp.status})`);
-      return resp.json();
+      const q = query(
+        collection(db, "cards"),
+        where("user_id", "==", profile.user_id),
+        where("is_public", "==", true)
+      );
+      const snap = await getDocs(q);
+      return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
     },
     enabled: !!profile?.user_id,
   });
