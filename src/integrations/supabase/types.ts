@@ -18,29 +18,77 @@ export type Database = {
         Row: {
           ai_summary: Json | null
           created_at: string
+          embed_code: string | null
+          embed_type: string | null
           id: string
+          is_public: boolean
           read_time: number | null
           tags: string[] | null
+          thumbnail_url: string | null
           title: string | null
           url: string
+          user_id: string | null
         }
         Insert: {
           ai_summary?: Json | null
           created_at?: string
+          embed_code?: string | null
+          embed_type?: string | null
           id?: string
+          is_public?: boolean
           read_time?: number | null
           tags?: string[] | null
+          thumbnail_url?: string | null
           title?: string | null
           url: string
+          user_id?: string | null
         }
         Update: {
           ai_summary?: Json | null
           created_at?: string
+          embed_code?: string | null
+          embed_type?: string | null
           id?: string
+          is_public?: boolean
           read_time?: number | null
           tags?: string[] | null
+          thumbnail_url?: string | null
           title?: string | null
           url?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          bio: string | null
+          created_at: string
+          display_name: string | null
+          id: string
+          updated_at: string
+          user_id: string
+          username: string | null
+        }
+        Insert: {
+          avatar_url?: string | null
+          bio?: string | null
+          created_at?: string
+          display_name?: string | null
+          id?: string
+          updated_at?: string
+          user_id: string
+          username?: string | null
+        }
+        Update: {
+          avatar_url?: string | null
+          bio?: string | null
+          created_at?: string
+          display_name?: string | null
+          id?: string
+          updated_at?: string
+          user_id?: string
+          username?: string | null
         }
         Relationships: []
       }
