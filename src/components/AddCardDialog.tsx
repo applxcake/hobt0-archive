@@ -203,18 +203,7 @@ const AddCardDialog = ({ onCardAdded }: AddCardDialogProps) => {
     const thumbnailUrl = ytMatch ? `https://img.youtube.com/vi/${ytMatch[1]}/hqdefault.jpg` : null;
     const embedCode = ytMatch ? `<iframe src="https://www.youtube.com/embed/${ytMatch[1]}" frameborder="0" allowfullscreen></iframe>` : null;
     
-    // Check validation synchronously
-    const isYouTube = isYouTubeUrl(targetUrl);
-    if (isYouTube && !customSummary.trim()) {
-      toast({ 
-        title: "Summary required for YouTube", 
-        description: "Please describe the video content so AI can generate a summary.", 
-        variant: "destructive" 
-      });
-      setLoading(false);
-      return;
-    }
-    
+    // Check validation synchronously (already validated at start, just set loading state)
     if (!user) {
       toast({ title: "Sign in required", description: "Please sign in to add cards.", variant: "destructive" });
       setLoading(false);
