@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>hobt0 - Save to Archive</title>
+  <link rel="stylesheet" href="popup.css" />
+</head>
+<body>
+  <div id="app">
+    <header>
+      <div class="logo">
+        <span class="icon">🧠</span>
+        <span class="brand">hobt0</span>
+      </div>
+      <div id="auth-status" class="auth-status">
+        <span class="loading">Loading...</span>
+      </div>
+    </header>
+
+    <main id="main-content">
+      <div id="login-section" class="section hidden">
+        <p class="info">Sign in to start archiving</p>
+        <button id="login-btn" class="btn btn-primary">Sign In</button>
+      </div>
+
+      <div id="save-section" class="section hidden">
+        <div class="url-preview">
+          <p id="page-title" class="page-title"></p>
+          <p id="page-url" class="page-url"></p>
+        </div>
+
+        <div class="form-group">
+          <label for="custom-title">Title (optional)</label>
+          <input type="text" id="custom-title" placeholder="Custom title..." />
+        </div>
+
+        <div class="form-group">
+          <label for="custom-summary">Your notes</label>
+          <textarea id="custom-summary" rows="3" placeholder="Quick notes about this page..."></textarea>
+        </div>
+
+        <div class="form-group">
+          <label for="tags">Tags (comma separated)</label>
+          <input type="text" id="tags" placeholder="design, reference, article..." />
+        </div>
+
+        <button id="save-btn" class="btn btn-primary">
+          <span class="btn-text">Save to Archive</span>
+          <span class="btn-loading hidden">Saving...</span>
+        </button>
+      </div>
+
+      <div id="success-section" class="section hidden">
+        <div class="success-message">
+          <span class="checkmark">✓</span>
+          <p>Saved successfully!</p>
+        </div>
+        <button id="open-archive-btn" class="btn btn-secondary">Open Archive</button>
+      </div>
+    </main>
+
+    <footer>
+      <a href="https://hobt0.tech" target="_blank">hobt0.tech</a>
+    </footer>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>
