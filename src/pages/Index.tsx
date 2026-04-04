@@ -8,7 +8,7 @@ export { db, doc, setDoc, deleteDoc, updateDoc, Timestamp };
 
 import KnowledgeCard from "@/components/KnowledgeCard";
 import AddCardDialog from "@/components/AddCardDialog";
-import { Database, Loader2, Settings, LogIn, Share2, Search } from "lucide-react";
+import { Database, Loader2, Settings, LogIn, Share2, Search, Folder } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -179,6 +179,10 @@ const Index = () => {
             </span>
             {user ? (
               <>
+                <Button variant="ghost" size="sm" onClick={() => navigate("/collections")} className="gap-1.5 text-xs">
+                  <Folder className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">Collections</span>
+                </Button>
                 <Button variant="ghost" size="sm" onClick={shareArchive} className="gap-1.5 text-xs">
                   <Share2 className="w-3.5 h-3.5" />
                 </Button>

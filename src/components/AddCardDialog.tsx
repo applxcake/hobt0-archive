@@ -1,9 +1,9 @@
 import { useState, useEffect } from "react";
-import { Plus, Loader2 } from "lucide-react";
+import { Plus, Loader2, Folder } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
-import { collection, addDoc, Timestamp, doc, updateDoc, getDoc } from "firebase/firestore";
+import { collection, addDoc, Timestamp, doc, updateDoc, getDoc, query, where, getDocs } from "firebase/firestore";
 import { db } from "@/integrations/firebase/client";
 import {
   Dialog,
@@ -72,14 +72,16 @@ const AddCardDialog = ({ onCardAdded }: AddCardDialogProps) => {
   const [loading, setLoading] = useState(false);
   const [similarPatterns, setSimilarPatterns] = useState<Array<{url: string; summary: string}>>([]);
   const [embedPreference, setEmbedPreference] = useState<"on" | "off" | "manual">("on");
+  const [collections, setCollections] = useState<Array<{id: string; name: string}>>([]);
+  const [selectedCollectionId, setSelectedCollectionId] = useState<string>("");
   const { toast } = useToast();
   const { user } = useAuth();
   const queryClient = useQueryClient();
 
-  // Load embed preference from profile
+  // Load embed preference and collections from profile
   useEffect(() => {
     if (!user?.uid) return;
-    const loadPreference = async () => {
+    const loadPreferenceAndCollections = async () => {
       try {
         const ref = doc(db, "profiles", user.uid);
         const snap = await getDoc(ref);
@@ -87,11 +89,16 @@ const AddCardDialog = ({ onCardAdded }: AddCardDialogProps) => {
           const data = snap.data();
           setEmbedPreference(data.embed_preference || "on");
         }
+        // Load collections
+        const colQuery = query(collection(db, "collections"), where("user_id", "==", user.uid));
+        const colSnap = await getDocs(colQuery);
+        const cols = colSnap.docs.map(d => ({ id: d.id, name: d.data().name }));
+        setCollections(cols);
       } catch (err) {
-        console.error("[AddCardDialog] Failed to load embed preference:", err);
+        console.error("[AddCardDialog] Failed to load data:", err);
       }
     };
-    loadPreference();
+    loadPreferenceAndCollections();
   }, [user?.uid]);
 
   // Detect YouTube URLs
@@ -236,7 +243,7 @@ const AddCardDialog = ({ onCardAdded }: AddCardDialogProps) => {
     const tempId = `temp_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
     const cardData = {
       url: targetUrl,
-      title: targetUrl, // Will be updated later
+      title: targetUrl,
       summary_text: placeholderSummary,
       ai_summary: [placeholderSummary],
       tags: [],
@@ -247,6 +254,7 @@ const AddCardDialog = ({ onCardAdded }: AddCardDialogProps) => {
       user_id: user.uid,
       is_public: false,
       show_embed: embedPreference === "manual" ? showEmbed : embedPreference === "on",
+      collection_id: selectedCollectionId || null,
       created_at: Timestamp.now(),
     };
 
@@ -265,6 +273,7 @@ const AddCardDialog = ({ onCardAdded }: AddCardDialogProps) => {
     setCustomTitle("");
     setCustomSummary("");
     setShowEmbed(true);
+    setSelectedCollectionId("");
     setSimilarPatterns([]);
     setOpen(false);
     setLoading(false);
@@ -470,6 +479,25 @@ const AddCardDialog = ({ onCardAdded }: AddCardDialogProps) => {
             rows={4}
             className="bg-secondary border-border text-foreground placeholder:text-muted-foreground text-sm resize-none"
           />
+          {/* Collection selector */}
+          {collections.length > 0 && (
+            <div className="space-y-2">
+              <label className="text-[10px] uppercase tracking-wider text-muted-foreground flex items-center gap-1">
+                <Folder className="w-3 h-3" />
+                Collection (optional)
+              </label>
+              <select
+                value={selectedCollectionId}
+                onChange={(e) => setSelectedCollectionId(e.target.value)}
+                className="w-full bg-secondary border border-border text-foreground text-sm rounded-md px-3 py-2"
+              >
+                <option value="">No collection</option>
+                {collections.map((col) => (
+                  <option key={col.id} value={col.id}>{col.name}</option>
+                ))}
+              </select>
+            </div>
+          )}
           {/* Show embed toggle - only visible in manual mode */}
           {embedPreference === "manual" && (
             <div className="flex items-center justify-between">

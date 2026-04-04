@@ -4,11 +4,12 @@ export default async function handler(request: Request): Promise<Response> {
   const url = new URL(request.url);
   const path = url.pathname;
   
-  // Check if this is a card or profile share URL
+  // Check if this is a card, profile, or collection share URL
   const cardMatch = path.match(/^\/card\/(.+)$/);
   const profileMatch = path.match(/^\/u\/(.+)$/);
+  const collectionMatch = path.match(/^\/collection\/(.+)$/);
   
-  if (!cardMatch && !profileMatch) {
+  if (!cardMatch && !profileMatch && !collectionMatch) {
     // Not a share URL, serve normal HTML
     return fetch(request);
   }
@@ -36,6 +37,12 @@ export default async function handler(request: Request): Promise<Response> {
   }
   
   const projectId = 'hobt0-31671';
+  
+  // Handle collection share (/collection/:id)
+  if (collectionMatch) {
+    const collectionId = collectionMatch[1];
+    return handleCollectionShare(collectionId, projectId);
+  }
   
   // Handle profile share (/u/:username)
   if (profileMatch) {
@@ -129,6 +136,67 @@ async function handleProfileShare(username: string, projectId: string): Promise<
     
   } catch (error) {
     return new Response('Profile not found', { status: 404 });
+  }
+}
+
+async function handleCollectionShare(collectionId: string, projectId: string): Promise<Response> {
+  try {
+    // Fetch collection from Firestore
+    const firestoreUrl = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/collections/${collectionId}`;
+    
+    const response = await fetch(firestoreUrl);
+    
+    if (!response.ok) throw new Error('Collection not found');
+    
+    const data = await response.json();
+    const fields = data.fields || {};
+    
+    // Check if collection is private
+    if (fields.is_public?.booleanValue === false) {
+      return new Response('Private collection', { status: 403 });
+    }
+    
+    const name = fields.name?.stringValue || 'Shared Collection';
+    const description = fields.description?.stringValue || '';
+    const cardCount = fields.card_count?.integerValue || 0;
+    
+    const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>${name} — hobt0 Collection</title>
+  <meta name="description" content="${description.slice(0, 160).replace(/"/g, '&quot;') || `A collection of ${cardCount} saved items on hobt0`}" />
+  <meta name="theme-color" content="#0a0a0a" />
+  
+  <meta property="og:title" content="${name} — Collection" />
+  <meta property="og:description" content="${description.slice(0, 200).replace(/"/g, '&quot;') || `A collection of ${cardCount} saved items on hobt0`}" />
+  <meta property="og:type" content="article" />
+  <meta property="og:url" content="https://hobt0.tech/collection/${collectionId}" />
+  <meta property="og:image" content="https://hobt0.tech/og-image.png" />
+  <meta property="og:site_name" content="hobt0" />
+  
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="${name} — Collection" />
+  <meta name="twitter:description" content="${description.slice(0, 200).replace(/"/g, '&quot;') || `A collection of ${cardCount} saved items on hobt0`}" />
+  <meta name="twitter:image" content="https://hobt0.tech/og-image.png" />
+</head>
+<body>
+  <h1>${name}</h1>
+  <p>${description || `A collection of ${cardCount} items`}</p>
+  <p><a href="https://hobt0.tech/collection/${collectionId}">View collection on hobt0</a></p>
+</body>
+</html>`;
+
+    return new Response(html, {
+      headers: {
+        'Content-Type': 'text/html',
+        'Cache-Control': 'public, max-age=300',
+      },
+    });
+    
+  } catch (error) {
+    return new Response('Collection not found', { status: 404 });
   }
 }
 

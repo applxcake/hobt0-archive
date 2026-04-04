@@ -9,6 +9,10 @@
       "destination": "/api/card-og"
     },
     {
+      "source": "/collection/([^/]+)",
+      "destination": "/api/card-og"
+    },
+    {
       "source": "/(.*)",
       "destination": "/index.html"
     }
