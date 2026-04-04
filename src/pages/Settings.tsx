@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { Database, ArrowLeft, Loader2, User, Check, X, Share2, Lock, Unlock } from "lucide-react";
+import ImportExportDialog from "@/components/ImportExportDialog";
 
 const PROFILE_CACHE_KEY = "hobt0_profile_v1";
 
@@ -424,6 +425,7 @@ const Settings = () => {
             <Button type="submit" disabled={isSaving} className="text-xs uppercase tracking-wider">
               {isSaving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : "Save Profile"}
             </Button>
+            <ImportExportDialog />
             <Button
               type="button"
               variant="destructive"
