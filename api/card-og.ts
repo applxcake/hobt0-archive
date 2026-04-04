@@ -14,9 +14,33 @@ export default async function handler(request: Request): Promise<Response> {
   
   const cardId = cardMatch[1];
   
+  // Check if request is from a crawler/bot
+  const userAgent = request.headers.get('user-agent') || '';
+  const isCrawler = /discordbot|twitterbot|facebookexternalhit|linkedinbot|whatsapp|slackbot|googlebot|bingbot/i.test(userAgent);
+  
+  // If not a crawler, serve the SPA directly (pass through to index.html)
+  if (!isCrawler) {
+    // Just serve index.html and let React Router handle the route
+    const indexUrl = new URL('/index.html', url.origin);
+    const indexResponse = await fetch(indexUrl);
+    
+    if (!indexResponse.ok) {
+      return new Response('Failed to load app', { status: 500 });
+    }
+    
+    const indexHtml = await indexResponse.text();
+    return new Response(indexHtml, {
+      headers: {
+        'Content-Type': 'text/html',
+        'Cache-Control': 'public, max-age=0, must-revalidate',
+      },
+    });
+  }
+  
+  // For crawlers: serve HTML with OG meta tags
   try {
     // Fetch card data from Firestore REST API
-    const projectId = process.env.VITE_FIREBASE_PROJECT_ID || 'hobt0-31671';
+    const projectId = 'hobt0-31671';
     const firestoreUrl = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/cards/${cardId}`;
     
     const response = await fetch(firestoreUrl);
@@ -55,7 +79,7 @@ export default async function handler(request: Request): Promise<Response> {
       return truncated + '...';
     };
     
-    // Build HTML with dynamic meta tags and app UI styling
+    // Build simple HTML with OG meta tags (for crawlers only)
     const html = `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -65,75 +89,6 @@ export default async function handler(request: Request): Promise<Response> {
   <meta name="description" content="${truncateAtWord(summary, 160).replace(/"/g, '&quot;')}" />
   <meta name="theme-color" content="#0a0a0a" />
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E🧠%3C/text%3E%3C/svg%3E" />
-  <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body {
-      font-family: 'JetBrains Mono', 'SF Mono', Monaco, monospace;
-      background: hsl(240 15% 4%);
-      color: hsl(160 30% 85%);
-      min-height: 100vh;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      background-image: 
-        linear-gradient(hsl(160 20% 15% / 0.3) 1px, transparent 1px),
-        linear-gradient(90deg, hsl(160 20% 15% / 0.3) 1px, transparent 1px);
-      background-size: 40px 40px;
-    }
-    .container {
-      text-align: center;
-      max-width: 400px;
-      padding: 2rem;
-    }
-    .icon {
-      width: 48px;
-      height: 48px;
-      margin: 0 auto 1.5rem;
-      border-radius: 4px;
-      background: hsl(240 10% 12%);
-      border: 1px solid hsl(160 20% 15%);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-    .icon svg {
-      width: 24px;
-      height: 24px;
-      color: hsl(160 100% 40%);
-    }
-    h1 {
-      font-size: 1.25rem;
-      font-weight: 700;
-      margin-bottom: 0.5rem;
-      letter-spacing: -0.02em;
-    }
-    p {
-      font-size: 0.875rem;
-      color: hsl(240 5% 45%);
-      line-height: 1.5;
-    }
-    .footer {
-      position: fixed;
-      bottom: 1.5rem;
-      left: 0;
-      right: 0;
-      text-align: center;
-      font-size: 0.625rem;
-      color: hsl(240 5% 45% / 0.6);
-      text-transform: uppercase;
-      letter-spacing: 0.2em;
-    }
-    .spinner {
-      width: 20px;
-      height: 20px;
-      border: 2px solid hsl(160 100% 40% / 0.3);
-      border-top-color: hsl(160 100% 40%);
-      border-radius: 50%;
-      animation: spin 1s linear infinite;
-      margin: 1rem auto 0;
-    }
-    @keyframes spin { to { transform: rotate(360deg); } }
-  </style>
   
   <!-- Open Graph -->
   <meta property="og:title" content="${title.replace(/"/g, '&quot;')}" />
@@ -148,19 +103,18 @@ export default async function handler(request: Request): Promise<Response> {
   <meta name="twitter:title" content="${title.replace(/"/g, '&quot;')}" />
   <meta name="twitter:description" content="${truncateAtWord(summary, 200).replace(/"/g, '&quot;')}" />
   <meta name="twitter:image" content="${ogImage}" />
-  
-  <!-- React App -->
-  <script type="module" src="/src/main.tsx"></script>
 </head>
 <body>
-  <div id="root"></div>
+  <h1>${title}</h1>
+  <p>${truncateAtWord(summary, 300)}</p>
+  <p><a href="https://hobt0.tech/card/${cardId}">View on hobt0</a></p>
 </body>
 </html>`;
     
     return new Response(html, {
       headers: {
         'Content-Type': 'text/html',
-        'Cache-Control': 'public, max-age=300', // Cache for 5 minutes
+        'Cache-Control': 'public, max-age=300',
       },
     });
     
