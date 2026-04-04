@@ -420,18 +420,11 @@ const KnowledgeCard = ({ card, index, isOwner = false, userId }: KnowledgeCardPr
         )}
 
         <div className="p-4">
-          {/* Header */}
-          <div className="flex items-start justify-between gap-2 mb-3">
-            <a
-              href={card.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex-1 min-w-0"
-            >
-              <h3 className="text-sm font-semibold text-foreground leading-tight line-clamp-2 group-hover:text-primary transition-colors">
-                {card.title || card.url}
-              </h3>
-            </a>
+          {/* Title - separate from URL now */}
+          <div className="flex items-start justify-between gap-2 mb-2">
+            <h3 className="text-sm font-semibold text-foreground leading-tight line-clamp-2 flex-1">
+              {card.title || card.url}
+            </h3>
             <div className="flex items-center gap-1 shrink-0">
               {isOwner && (
                 <button 
@@ -484,6 +477,16 @@ const KnowledgeCard = ({ card, index, isOwner = false, userId }: KnowledgeCardPr
               )}
             </div>
           </div>
+
+          {/* URL - now shown separately below title */}
+          <a
+            href={card.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="block text-[10px] text-muted-foreground/70 mb-3 truncate hover:text-primary transition-colors"
+          >
+            {card.url}
+          </a>
 
           {/* One-paragraph summary */}
           {summaryParagraph && (

@@ -66,6 +66,7 @@ const estimateReadTime = (text: string): number => {
 const AddCardDialog = ({ onCardAdded }: AddCardDialogProps) => {
   const [open, setOpen] = useState(false);
   const [url, setUrl] = useState("");
+  const [customTitle, setCustomTitle] = useState("");
   const [customSummary, setCustomSummary] = useState("");
   const [loading, setLoading] = useState(false);
   const [similarPatterns, setSimilarPatterns] = useState<Array<{url: string; summary: string}>>([]);
@@ -230,6 +231,7 @@ const AddCardDialog = ({ onCardAdded }: AddCardDialogProps) => {
 
     // Capture values before clearing
     const userHint = customSummary.trim();
+    const userTitle = customTitle.trim();
 
     // Add to UI immediately (optimistic)
     queryClient.setQueryData(["cards", user.uid], (old: any[] = []) => [
@@ -239,6 +241,7 @@ const AddCardDialog = ({ onCardAdded }: AddCardDialogProps) => {
 
     // Close dialog immediately
     setUrl("");
+    setCustomTitle("");
     setCustomSummary("");
     setSimilarPatterns([]);
     setOpen(false);
@@ -247,23 +250,27 @@ const AddCardDialog = ({ onCardAdded }: AddCardDialogProps) => {
 
     // Background: Get title and save to Firestore
     (async () => {
-      let pageTitle = targetUrl;
-      try {
-        const jinaRes = await fetchWithTimeout(`https://r.jina.ai/${targetUrl}`, {
-          headers: { Accept: "text/plain" },
-        }, 5000);
-        if (jinaRes.ok) {
-          const text = await jinaRes.text();
-          const firstLine = text.split("\n")[0];
-          if (firstLine?.startsWith("Title:")) {
-            pageTitle = firstLine.replace("Title:", "").trim();
+      let pageTitle = userTitle || targetUrl;
+      
+      // Only fetch title if user didn't provide one
+      if (!userTitle) {
+        try {
+          const jinaRes = await fetchWithTimeout(`https://r.jina.ai/${targetUrl}`, {
+            headers: { Accept: "text/plain" },
+          }, 5000);
+          if (jinaRes.ok) {
+            const text = await jinaRes.text();
+            const firstLine = text.split("\n")[0];
+            if (firstLine?.startsWith("Title:")) {
+              pageTitle = firstLine.replace("Title:", "").trim();
+            }
           }
+        } catch {
+          // Ignore
         }
-      } catch {
-        // Ignore
       }
 
-      // Save to Firestore with the fetched title
+      // Save to Firestore with the title (user-provided or fetched)
       const finalCardData = { ...cardData, title: pageTitle || targetUrl };
       
       try {
@@ -405,6 +412,13 @@ const AddCardDialog = ({ onCardAdded }: AddCardDialogProps) => {
               }
             }}
             required
+            className="bg-secondary border-border text-foreground placeholder:text-muted-foreground text-sm"
+          />
+          <Input
+            type="text"
+            placeholder="Title (optional - will auto-fetch if empty)..."
+            value={customTitle}
+            onChange={(e) => setCustomTitle(e.target.value)}
             className="bg-secondary border-border text-foreground placeholder:text-muted-foreground text-sm"
           />
           {similarPatterns.length > 0 && (
