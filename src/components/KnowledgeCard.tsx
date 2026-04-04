@@ -275,22 +275,14 @@ const KnowledgeCard = ({ card, index, isOwner = false, userId }: KnowledgeCardPr
   };
 
   const shareCard = () => {
-    const embedValue =
-      card.embed_type === "youtube" && youtubeId
-        ? `https://www.youtube.com/embed/${youtubeId}`
-        : card.embed_code || "N/A";
-    const text = [
-      `Title: ${card.title || card.url}`,
-      `URL: ${card.url}`,
-      summaryParagraph ? `Summary: ${summaryParagraph}` : "",
-      `Embed Type: ${card.embed_type || "none"}`,
-      `Embed: ${embedValue}`,
-    ]
-      .filter(Boolean)
-      .join("\n\n");
-
-    navigator.clipboard.writeText(text);
-    toast({ title: "Card details copied", description: "Copied title, URL, summary and embed details." });
+    // Make card public first if it's private
+    if (!isPublic) {
+      togglePrivacy();
+    }
+    
+    const shareUrl = `${window.location.origin}/card/${card.id}`;
+    navigator.clipboard.writeText(shareUrl);
+    toast({ title: "Link copied", description: "Anyone can now view this card with this link." });
   };
 
   const saveEditedSummary = async () => {
@@ -481,7 +473,7 @@ const KnowledgeCard = ({ card, index, isOwner = false, userId }: KnowledgeCardPr
                     </DropdownMenuItem>
                     <DropdownMenuItem onClick={shareCard} className="text-xs gap-2">
                       <Share2 className="w-3 h-3" />
-                      Share URL
+                      Share Link
                     </DropdownMenuItem>
                     <DropdownMenuItem onClick={deleteCard} disabled={isDeleting} className="text-xs gap-2 text-destructive">
                       <Trash2 className="w-3 h-3" />

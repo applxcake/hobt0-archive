@@ -8,6 +8,7 @@ import Index from "./pages/Index";
 import Login from "./pages/Login";
 import Settings from "./pages/Settings";
 import PublicProfile from "./pages/PublicProfile";
+import CardView from "./pages/CardView";
 import NotFound from "./pages/NotFound";
 import GeminiTest from "./test/GeminiTest";
 
@@ -25,6 +26,7 @@ const App = () => (
             <Route path="/login" element={<Login />} />
             <Route path="/settings" element={<Settings />} />
             <Route path="/u/:username" element={<PublicProfile />} />
+            <Route path="/card/:cardId" element={<CardView />} />
             <Route path="/test/gemini" element={<GeminiTest />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
