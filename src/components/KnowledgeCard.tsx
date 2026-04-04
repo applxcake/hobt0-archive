@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ExternalLink, Clock, Calendar, Lock, Unlock, MoreVertical, Trash2, Share2, Loader2, Edit3, Sparkles } from "lucide-react";
+import { ExternalLink, Calendar, Lock, Unlock, MoreVertical, Trash2, Share2, Loader2, Edit3, Sparkles } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { doc, deleteDoc, updateDoc } from "firebase/firestore";
 import { db } from "@/integrations/firebase/client";
@@ -388,7 +388,7 @@ const KnowledgeCard = ({ card, index, isOwner = false, userId }: KnowledgeCardPr
   return (
     <>
       <div
-        className="group block border border-border bg-card rounded-md overflow-hidden hover:border-primary/50 hover:glow-primary transition-[border-color,box-shadow] duration-300 animate-fade-in"
+        className="group block border border-border bg-card rounded-md overflow-hidden hover:border-primary transition-[border-color] duration-200 animate-fade-in"
         style={{ 
           backfaceVisibility: 'hidden', 
           WebkitBackfaceVisibility: 'hidden', 
@@ -518,12 +518,6 @@ const KnowledgeCard = ({ card, index, isOwner = false, userId }: KnowledgeCardPr
           <div className="flex items-center gap-3 text-[10px] text-muted-foreground uppercase tracking-wider">
             {card.embed_type && (
               <span className="text-primary">{card.embed_type}</span>
-            )}
-            {card.embed_type === "youtube" && card.read_time != null && card.read_time > 0 && (
-              <span className="flex items-center gap-1">
-                <Clock className="w-3 h-3" />
-                {card.read_time}m
-              </span>
             )}
             <span className="flex items-center gap-1">
               <Calendar className="w-3 h-3" />
