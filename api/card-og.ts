@@ -44,22 +44,100 @@ export default async function handler(request: Request): Promise<Response> {
     // Generate OG image URL (use thumbnail if available)
     const ogImage = thumbnailUrl || `https://hobt0.tech/og-image.png`;
     
-    // Build HTML with dynamic meta tags
+    // Helper to truncate text at word boundary with ellipsis
+    const truncateAtWord = (text: string, maxLength: number): string => {
+      if (text.length <= maxLength) return text;
+      const truncated = text.slice(0, maxLength);
+      const lastSpace = truncated.lastIndexOf(' ');
+      if (lastSpace > 0) {
+        return truncated.slice(0, lastSpace) + '...';
+      }
+      return truncated + '...';
+    };
+    
+    // Build HTML with dynamic meta tags and app UI styling
     const html = `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>${title} — hobt0</title>
-  <meta name="description" content="${summary.slice(0, 160).replace(/"/g, '&quot;')}" />
+  <meta name="description" content="${truncateAtWord(summary, 160).replace(/"/g, '&quot;')}" />
   <meta name="theme-color" content="#0a0a0a" />
-  
-  <!-- Favicon -->
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E🧠%3C/text%3E%3C/svg%3E" />
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'JetBrains Mono', 'SF Mono', Monaco, monospace;
+      background: hsl(240 15% 4%);
+      color: hsl(160 30% 85%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background-image: 
+        linear-gradient(hsl(160 20% 15% / 0.3) 1px, transparent 1px),
+        linear-gradient(90deg, hsl(160 20% 15% / 0.3) 1px, transparent 1px);
+      background-size: 40px 40px;
+    }
+    .container {
+      text-align: center;
+      max-width: 400px;
+      padding: 2rem;
+    }
+    .icon {
+      width: 48px;
+      height: 48px;
+      margin: 0 auto 1.5rem;
+      border-radius: 4px;
+      background: hsl(240 10% 12%);
+      border: 1px solid hsl(160 20% 15%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .icon svg {
+      width: 24px;
+      height: 24px;
+      color: hsl(160 100% 40%);
+    }
+    h1 {
+      font-size: 1.25rem;
+      font-weight: 700;
+      margin-bottom: 0.5rem;
+      letter-spacing: -0.02em;
+    }
+    p {
+      font-size: 0.875rem;
+      color: hsl(240 5% 45%);
+      line-height: 1.5;
+    }
+    .footer {
+      position: fixed;
+      bottom: 1.5rem;
+      left: 0;
+      right: 0;
+      text-align: center;
+      font-size: 0.625rem;
+      color: hsl(240 5% 45% / 0.6);
+      text-transform: uppercase;
+      letter-spacing: 0.2em;
+    }
+    .spinner {
+      width: 20px;
+      height: 20px;
+      border: 2px solid hsl(160 100% 40% / 0.3);
+      border-top-color: hsl(160 100% 40%);
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin: 1rem auto 0;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
   
   <!-- Open Graph -->
   <meta property="og:title" content="${title.replace(/"/g, '&quot;')}" />
-  <meta property="og:description" content="${summary.slice(0, 200).replace(/"/g, '&quot;')}" />
+  <meta property="og:description" content="${truncateAtWord(summary, 200).replace(/"/g, '&quot;')}" />
   <meta property="og:type" content="article" />
   <meta property="og:url" content="https://hobt0.tech/card/${cardId}" />
   <meta property="og:image" content="${ogImage}" />
@@ -68,17 +146,14 @@ export default async function handler(request: Request): Promise<Response> {
   <!-- Twitter -->
   <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:title" content="${title.replace(/"/g, '&quot;')}" />
-  <meta name="twitter:description" content="${summary.slice(0, 200).replace(/"/g, '&quot;')}" />
+  <meta name="twitter:description" content="${truncateAtWord(summary, 200).replace(/"/g, '&quot;')}" />
   <meta name="twitter:image" content="${ogImage}" />
   
-  <!-- Redirect to actual app -->
-  <meta http-equiv="refresh" content="0;url=/card/${cardId}" />
+  <!-- React App -->
+  <script type="module" src="/src/main.tsx"></script>
 </head>
 <body>
-  <p>Redirecting to ${title}...</p>
-  <script>
-    window.location.href = '/card/${cardId}';
-  </script>
+  <div id="root"></div>
 </body>
 </html>`;
     
@@ -92,19 +167,106 @@ export default async function handler(request: Request): Promise<Response> {
   } catch (error) {
     console.error('Edge function error:', error);
     
-    // Return generic card not found HTML
+    // Return styled card not found HTML matching app UI
     const html = `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Card Not Found — hobt0</title>
+  <meta name="description" content="This card doesn't exist or may have been deleted." />
+  <meta name="theme-color" content="#0a0a0a" />
   <meta property="og:title" content="Card Not Found — hobt0" />
   <meta property="og:description" content="This card doesn't exist or may have been deleted." />
-  <meta http-equiv="refresh" content="0;url=/" />
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E🧠%3C/text%3E%3C/svg%3E" />
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'JetBrains Mono', 'SF Mono', Monaco, monospace;
+      background: hsl(240 15% 4%);
+      color: hsl(160 30% 85%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background-image: 
+        linear-gradient(hsl(160 20% 15% / 0.3) 1px, transparent 1px),
+        linear-gradient(90deg, hsl(160 20% 15% / 0.3) 1px, transparent 1px);
+      background-size: 40px 40px;
+    }
+    .container {
+      text-align: center;
+      max-width: 400px;
+      padding: 2rem;
+    }
+    .icon {
+      width: 64px;
+      height: 64px;
+      margin: 0 auto 1.5rem;
+      border-radius: 4px;
+      background: hsl(240 10% 12%);
+      border: 1px solid hsl(160 20% 15%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 2rem;
+    }
+    h1 {
+      font-size: 1.25rem;
+      font-weight: 700;
+      margin-bottom: 0.75rem;
+      letter-spacing: -0.02em;
+    }
+    p {
+      font-size: 0.875rem;
+      color: hsl(240 5% 45%);
+      margin-bottom: 1.5rem;
+      line-height: 1.5;
+    }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.5rem 1rem;
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      background: transparent;
+      color: hsl(160 30% 85%);
+      border: 1px solid hsl(160 20% 15%);
+      border-radius: 4px;
+      cursor: pointer;
+      text-decoration: none;
+      transition: all 0.2s;
+    }
+    .btn:hover {
+      border-color: hsl(160 100% 40%);
+      color: hsl(160 100% 40%);
+    }
+    .footer {
+      position: fixed;
+      bottom: 1.5rem;
+      left: 0;
+      right: 0;
+      text-align: center;
+      font-size: 0.625rem;
+      color: hsl(240 5% 45% / 0.6);
+      text-transform: uppercase;
+      letter-spacing: 0.2em;
+    }
+  </style>
+  <meta http-equiv="refresh" content="2;url=/" />
 </head>
 <body>
-  <p>Card not found. Redirecting...</p>
-  <script>window.location.href = '/';</script>
+  <div id="root"></div>
+  <div class="container">
+    <div class="icon">🗄️</div>
+    <h1>Card Not Found</h1>
+    <p>This card doesn't exist or may have been deleted.</p>
+    <a href="/" class="btn">← Go Home</a>
+  </div>
+  <div class="footer">hobt0.tech · cyber archive</div>
+  <script>setTimeout(() => window.location.href = '/', 2000);</script>
 </body>
 </html>`;
     
