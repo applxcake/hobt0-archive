@@ -297,8 +297,9 @@ const AddCardDialog = ({ onCardAdded }: AddCardDialogProps) => {
     embedType: string | null,
     userCustomSummary: string
   ) => {
-    // Skip AI if user wrote custom summary
-    if (userCustomSummary) {
+    // For YouTube: use user's summary as context for Gemini
+    // For others: if user wrote custom summary, skip AI and just save it
+    if (userCustomSummary && embedType !== "youtube") {
       savePattern(targetUrl, userCustomSummary);
       return;
     }
@@ -331,8 +332,9 @@ const AddCardDialog = ({ onCardAdded }: AddCardDialogProps) => {
       }
     }
 
-    // Call Gemini
-    const data = await summarizeWithGemini(targetUrl, pageContent, embedType);
+    // Call Gemini (with user's summary as content for YouTube, or hint for others)
+    const contentForGemini = embedType === "youtube" && userCustomSummary ? userCustomSummary : pageContent;
+    const data = await summarizeWithGemini(targetUrl, contentForGemini, embedType, userCustomSummary);
     console.log("[BG] Gemini result:", data);
     
     if (!data?.summary_text) {

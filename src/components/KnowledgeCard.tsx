@@ -388,8 +388,13 @@ const KnowledgeCard = ({ card, index, isOwner = false, userId }: KnowledgeCardPr
   return (
     <>
       <div
-        className="group block border border-border bg-card rounded-md overflow-hidden hover:border-primary/50 hover:glow-primary transition-all duration-300 animate-fade-in"
-        style={{ animationDelay: `${index * 60}ms` }}
+        className="group block border border-border bg-card rounded-md overflow-hidden hover:border-primary/50 hover:glow-primary transition-[border-color,box-shadow] duration-300 animate-fade-in"
+        style={{ 
+          backfaceVisibility: 'hidden', 
+          WebkitBackfaceVisibility: 'hidden', 
+          animationDelay: `${index * 60}ms`,
+          transform: 'translateZ(0)'
+        }}
       >
         {/* YouTube Embed */}
         {youtubeId && (
