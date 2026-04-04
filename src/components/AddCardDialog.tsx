@@ -1,9 +1,9 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Plus, Loader2 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
-import { collection, addDoc, Timestamp, doc, updateDoc } from "firebase/firestore";
+import { collection, addDoc, Timestamp, doc, updateDoc, getDoc } from "firebase/firestore";
 import { db } from "@/integrations/firebase/client";
 import {
   Dialog,
@@ -68,11 +68,31 @@ const AddCardDialog = ({ onCardAdded }: AddCardDialogProps) => {
   const [url, setUrl] = useState("");
   const [customTitle, setCustomTitle] = useState("");
   const [customSummary, setCustomSummary] = useState("");
+  const [showEmbed, setShowEmbed] = useState(true);
   const [loading, setLoading] = useState(false);
   const [similarPatterns, setSimilarPatterns] = useState<Array<{url: string; summary: string}>>([]);
+  const [embedPreference, setEmbedPreference] = useState<"on" | "off" | "manual">("on");
   const { toast } = useToast();
   const { user } = useAuth();
   const queryClient = useQueryClient();
+
+  // Load embed preference from profile
+  useEffect(() => {
+    if (!user?.uid) return;
+    const loadPreference = async () => {
+      try {
+        const ref = doc(db, "profiles", user.uid);
+        const snap = await getDoc(ref);
+        if (snap.exists()) {
+          const data = snap.data();
+          setEmbedPreference(data.embed_preference || "on");
+        }
+      } catch (err) {
+        console.error("[AddCardDialog] Failed to load embed preference:", err);
+      }
+    };
+    loadPreference();
+  }, [user?.uid]);
 
   // Detect YouTube URLs
   const isYouTubeUrl = (url: string): boolean => {
@@ -226,6 +246,7 @@ const AddCardDialog = ({ onCardAdded }: AddCardDialogProps) => {
       embed_type: embedType,
       user_id: user.uid,
       is_public: false,
+      show_embed: embedPreference === "manual" ? showEmbed : embedPreference === "on",
       created_at: Timestamp.now(),
     };
 
@@ -243,6 +264,7 @@ const AddCardDialog = ({ onCardAdded }: AddCardDialogProps) => {
     setUrl("");
     setCustomTitle("");
     setCustomSummary("");
+    setShowEmbed(true);
     setSimilarPatterns([]);
     setOpen(false);
     setLoading(false);
@@ -448,6 +470,23 @@ const AddCardDialog = ({ onCardAdded }: AddCardDialogProps) => {
             rows={4}
             className="bg-secondary border-border text-foreground placeholder:text-muted-foreground text-sm resize-none"
           />
+          {/* Show embed toggle - only visible in manual mode */}
+          {embedPreference === "manual" && (
+            <div className="flex items-center justify-between">
+              <label className="text-[10px] uppercase tracking-wider text-muted-foreground">Show Embed</label>
+              <button
+                type="button"
+                onClick={() => setShowEmbed(!showEmbed)}
+                className={`px-3 py-1 text-xs uppercase tracking-wider rounded-sm border transition-colors ${
+                  showEmbed
+                    ? "bg-primary text-primary-foreground border-primary"
+                    : "bg-secondary text-muted-foreground border-border"
+                }`}
+              >
+                {showEmbed ? "On" : "Off"}
+              </button>
+            </div>
+          )}
           <Button type="submit" disabled={loading} className="w-full text-xs uppercase tracking-wider">
             {loading ? (
               <>

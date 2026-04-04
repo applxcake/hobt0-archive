@@ -31,6 +31,7 @@ type Card = {
   embed_code?: string | null;
   embed_type?: string | null;
   is_public?: boolean;
+  show_embed?: boolean | null;
   read_time?: number | null;
 };
 
@@ -39,6 +40,7 @@ interface KnowledgeCardProps {
   index: number;
   isOwner?: boolean;
   userId?: string;
+  embedPreference?: "on" | "off" | "manual";
 }
 
 const YOUTUBE_REGEX = /(?:youtube\.com\/(?:watch\?v=|embed\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/;
@@ -147,7 +149,15 @@ const fetchPageContent = async (url: string): Promise<{ content: string; title: 
   }
 };
 
-const KnowledgeCard = ({ card, index, isOwner = false, userId }: KnowledgeCardProps) => {
+const KnowledgeCard = ({ card, index, isOwner = false, userId, embedPreference = "on" }: KnowledgeCardProps) => {
+  // Helper to determine if embed should be shown
+  const shouldShowEmbed = (): boolean => {
+    if (embedPreference === "off") return false;
+    if (embedPreference === "on") return true;
+    // Manual mode - check per-card setting
+    return card.show_embed !== false; // Default to true if not set
+  };
+
   const summaryParagraph =
     typeof card.summary_text === "string" && card.summary_text.trim()
       ? card.summary_text.trim()
@@ -172,9 +182,13 @@ const KnowledgeCard = ({ card, index, isOwner = false, userId }: KnowledgeCardPr
   const [isPublic, setIsPublic] = useState(card.is_public ?? false);
   const [isDeleted, setIsDeleted] = useState(false);
   
-  // Edit summary dialog
+  // Edit node dialog - now allows editing title, url, summary, tags, and show_embed
   const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [editedTitle, setEditedTitle] = useState(card.title || "");
+  const [editedUrl, setEditedUrl] = useState(card.url || "");
   const [editedSummary, setEditedSummary] = useState(summaryParagraph);
+  const [editedTags, setEditedTags] = useState(tags.join(", "));
+  const [editedShowEmbed, setEditedShowEmbed] = useState(card.show_embed !== false);
   const [isSavingEdit, setIsSavingEdit] = useState(false);
   
   // Regenerate dialog
@@ -285,13 +299,24 @@ const KnowledgeCard = ({ card, index, isOwner = false, userId }: KnowledgeCardPr
     toast({ title: "Link copied", description: "Anyone can now view this card with this link." });
   };
 
-  const saveEditedSummary = async () => {
+  const saveEditedNode = async () => {
     if (!userId) return;
     setIsSavingEdit(true);
     
+    // Parse tags from comma-separated string
+    const parsedTags = editedTags
+      .split(",")
+      .map((t) => t.trim())
+      .filter((t) => t.length > 0)
+      .slice(0, 5); // Max 5 tags
+    
     const newData = {
-      summary_text: editedSummary,
-      ai_summary: [editedSummary],
+      title: editedTitle.trim() || card.url,
+      url: editedUrl.trim() || card.url,
+      summary_text: editedSummary.trim(),
+      ai_summary: editedSummary.trim() ? [editedSummary.trim()] : [],
+      tags: parsedTags,
+      show_embed: editedShowEmbed,
     };
     
     const STORAGE_KEY = "hobt0_cards_v1";
@@ -306,7 +331,7 @@ const KnowledgeCard = ({ card, index, isOwner = false, userId }: KnowledgeCardPr
       }
     }
     
-    toast({ title: "Summary updated" });
+    toast({ title: "Node updated" });
     setEditDialogOpen(false);
     
     try {
@@ -388,8 +413,8 @@ const KnowledgeCard = ({ card, index, isOwner = false, userId }: KnowledgeCardPr
           transform: 'translateZ(0)'
         }}
       >
-        {/* YouTube Embed */}
-        {youtubeId && (
+        {/* YouTube Embed - conditionally shown based on preference */}
+        {shouldShowEmbed() && youtubeId && (
           <div className="aspect-video w-full">
             <iframe
               src={`https://www.youtube.com/embed/${youtubeId}`}
@@ -401,18 +426,18 @@ const KnowledgeCard = ({ card, index, isOwner = false, userId }: KnowledgeCardPr
           </div>
         )}
 
-        {/* Image Preview */}
-        {!youtubeId && isImage && (
+        {/* Image Preview - conditionally shown based on preference */}
+        {shouldShowEmbed() && !youtubeId && isImage && (
           <img src={card.url} alt={card.title || "Image"} className="w-full object-cover max-h-64" loading="lazy" />
         )}
 
-        {/* Thumbnail fallback */}
-        {!youtubeId && !isImage && thumbnailUrl && (
+        {/* Thumbnail fallback - conditionally shown based on preference */}
+        {shouldShowEmbed() && !youtubeId && !isImage && thumbnailUrl && (
           <img src={thumbnailUrl} alt={card.title || ""} className="w-full object-cover max-h-40" loading="lazy" />
         )}
 
-        {/* Embed code */}
-        {!youtubeId && !isImage && !thumbnailUrl && card.embed_code && (
+        {/* Embed code - conditionally shown based on preference */}
+        {shouldShowEmbed() && !youtubeId && !isImage && !thumbnailUrl && card.embed_code && (
           <div
             className="w-full overflow-hidden max-h-64"
             dangerouslySetInnerHTML={{ __html: card.embed_code as string }}
@@ -454,7 +479,7 @@ const KnowledgeCard = ({ card, index, isOwner = false, userId }: KnowledgeCardPr
                   <DropdownMenuContent align="end" className="bg-card border-border">
                     <DropdownMenuItem onClick={() => setEditDialogOpen(true)} className="text-xs gap-2">
                       <Edit3 className="w-3 h-3" />
-                      Edit Summary
+                      Edit Node
                     </DropdownMenuItem>
                     <DropdownMenuItem onClick={() => setRegenDialogOpen(true)} className="text-xs gap-2">
                       <Sparkles className="w-3 h-3" />
@@ -522,25 +547,73 @@ const KnowledgeCard = ({ card, index, isOwner = false, userId }: KnowledgeCardPr
         </div>
       </div>
 
-      {/* Edit Summary Dialog */}
+      {/* Edit Node Dialog */}
       <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
         <DialogContent className="bg-card border-border max-w-lg">
           <DialogHeader>
             <DialogTitle className="text-sm uppercase tracking-wider text-foreground">
-              Edit Summary
+              Edit Node
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-4 pt-4">
-            <Textarea
-              value={editedSummary}
-              onChange={(e) => setEditedSummary(e.target.value)}
-              placeholder="Enter summary..."
-              rows={6}
-              className="bg-secondary border-border text-foreground text-sm resize-none"
-            />
-            <div className="flex gap-2">
+            <div className="space-y-2">
+              <label className="text-xs uppercase tracking-wider text-muted-foreground">Title</label>
+              <Input
+                value={editedTitle}
+                onChange={(e) => setEditedTitle(e.target.value)}
+                placeholder="Enter title..."
+                className="bg-secondary border-border text-foreground text-sm"
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-xs uppercase tracking-wider text-muted-foreground">URL</label>
+              <Input
+                type="url"
+                value={editedUrl}
+                onChange={(e) => setEditedUrl(e.target.value)}
+                placeholder="https://..."
+                className="bg-secondary border-border text-foreground text-sm"
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-xs uppercase tracking-wider text-muted-foreground">Summary</label>
+              <Textarea
+                value={editedSummary}
+                onChange={(e) => setEditedSummary(e.target.value)}
+                placeholder="Enter summary..."
+                rows={4}
+                className="bg-secondary border-border text-foreground text-sm resize-none"
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-xs uppercase tracking-wider text-muted-foreground">Tags (comma separated)</label>
+              <Input
+                value={editedTags}
+                onChange={(e) => setEditedTags(e.target.value)}
+                placeholder="tag1, tag2, tag3..."
+                className="bg-secondary border-border text-foreground text-sm"
+              />
+            </div>
+            {/* Show embed toggle - only visible in manual mode */}
+            {embedPreference === "manual" && (
+              <div className="flex items-center justify-between pt-2">
+                <label className="text-xs uppercase tracking-wider text-muted-foreground">Show Embed</label>
+                <button
+                  type="button"
+                  onClick={() => setEditedShowEmbed(!editedShowEmbed)}
+                  className={`px-3 py-1 text-xs uppercase tracking-wider rounded-sm border transition-colors ${
+                    editedShowEmbed
+                      ? "bg-primary text-primary-foreground border-primary"
+                      : "bg-secondary text-muted-foreground border-border"
+                  }`}
+                >
+                  {editedShowEmbed ? "On" : "Off"}
+                </button>
+              </div>
+            )}
+            <div className="flex gap-2 pt-2">
               <Button 
-                onClick={saveEditedSummary} 
+                onClick={saveEditedNode} 
                 disabled={isSavingEdit}
                 className="text-xs uppercase tracking-wider"
               >

@@ -56,6 +56,7 @@ const Settings = () => {
     display_name: "",
     avatar_url: "",
     bio: "",
+    embed_preference: "on", // "on" | "off" | "manual"
   });
 
   // Username availability check
@@ -77,6 +78,7 @@ const Settings = () => {
         display_name: cached.display_name || "",
         avatar_url: cached.avatar_url || "",
         bio: cached.bio || "",
+        embed_preference: cached.embed_preference || "on",
       });
       setIsLoading(false);
     }
@@ -93,6 +95,7 @@ const Settings = () => {
             display_name: data.display_name || "",
             avatar_url: data.avatar_url || "",
             bio: data.bio || "",
+            embed_preference: data.embed_preference || "on",
           };
           setProfile(loaded);
           setOriginalProfile(data);
@@ -171,6 +174,7 @@ const Settings = () => {
       display_name: profile.display_name || null,
       avatar_url: profile.avatar_url || null,
       bio: profile.bio || null,
+      embed_preference: profile.embed_preference || "on",
       updated_at: new Date().toISOString(),
     };
     
@@ -354,6 +358,33 @@ const Settings = () => {
               rows={3}
               className="bg-secondary border-border text-foreground text-sm resize-none"
             />
+          </div>
+
+          <div className="space-y-3 pt-2 border-t border-border">
+            <label className="text-[10px] uppercase tracking-wider text-muted-foreground">
+              Show Embed
+            </label>
+            <div className="flex gap-2">
+              {["on", "off", "manual"].map((option) => (
+                <button
+                  key={option}
+                  type="button"
+                  onClick={() => setProfile({ ...profile, embed_preference: option })}
+                  className={`px-3 py-1.5 text-xs uppercase tracking-wider rounded-sm border transition-colors ${
+                    profile.embed_preference === option
+                      ? "bg-primary text-primary-foreground border-primary"
+                      : "bg-secondary text-muted-foreground border-border hover:text-foreground"
+                  }`}
+                >
+                  {option}
+                </button>
+              ))}
+            </div>
+            <p className="text-[10px] text-muted-foreground/70">
+              {profile.embed_preference === "on" && "Embeds will be shown for all cards"}
+              {profile.embed_preference === "off" && "Embeds will be hidden for all cards"}
+              {profile.embed_preference === "manual" && "You can toggle embeds per card when adding or editing"}
+            </p>
           </div>
 
           <div className="flex gap-3">

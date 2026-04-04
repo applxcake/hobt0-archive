@@ -18,6 +18,7 @@ interface Card {
   embed_code?: string | null;
   embed_type?: string | null;
   is_public?: boolean;
+  show_embed?: boolean | null;
   user_id?: string;
 }
 
@@ -48,18 +49,22 @@ const CardView = () => {
 
     const fetchCard = async () => {
       try {
+        console.log("[CardView] Fetching card:", cardId);
         const cardRef = doc(db, "cards", cardId);
         const cardSnap = await getDoc(cardRef);
 
         if (!cardSnap.exists()) {
+          console.log("[CardView] Card not found in Firestore");
           setLoading(false);
           return;
         }
 
         const cardData = { id: cardSnap.id, ...cardSnap.data() } as Card;
+        console.log("[CardView] Card found:", cardData.id, "is_public:", cardData.is_public);
 
         // Check if card is private
         if (!cardData.is_public) {
+          console.log("[CardView] Card is private - access denied");
           setAccessDenied(true);
           setLoading(false);
           return;
@@ -68,7 +73,7 @@ const CardView = () => {
         setCard(cardData);
         setLoading(false);
       } catch (error) {
-        console.error("Error fetching card:", error);
+        console.error("[CardView] Error fetching card:", error);
         setLoading(false);
       }
     };
@@ -159,6 +164,9 @@ const CardView = () => {
     year: "numeric",
   });
 
+  // Determine if embed should be shown (default to true if not set)
+  const shouldShowEmbed = card.show_embed !== false;
+
   return (
     <div className="min-h-screen scanline">
       <div className="grid-pattern fixed inset-0 pointer-events-none opacity-40" />
@@ -189,8 +197,8 @@ const CardView = () => {
 
           {/* Card */}
           <div className="border border-border bg-card rounded-md overflow-hidden">
-            {/* YouTube Embed */}
-            {youtubeId && (
+            {/* YouTube Embed - conditionally shown */}
+            {shouldShowEmbed && youtubeId && (
               <div className="aspect-video w-full">
                 <iframe
                   src={`https://www.youtube.com/embed/${youtubeId}`}
@@ -201,18 +209,18 @@ const CardView = () => {
               </div>
             )}
 
-            {/* Image Preview */}
-            {!youtubeId && isImage && (
+            {/* Image Preview - conditionally shown */}
+            {shouldShowEmbed && !youtubeId && isImage && (
               <img src={card.url} alt={card.title || "Image"} className="w-full object-cover max-h-64" />
             )}
 
-            {/* Thumbnail fallback */}
-            {!youtubeId && !isImage && thumbnailUrl && (
+            {/* Thumbnail fallback - conditionally shown */}
+            {shouldShowEmbed && !youtubeId && !isImage && thumbnailUrl && (
               <img src={thumbnailUrl} alt={card.title || ""} className="w-full object-cover max-h-40" />
             )}
 
-            {/* Embed code */}
-            {!youtubeId && !isImage && !thumbnailUrl && card.embed_code && (
+            {/* Embed code - conditionally shown */}
+            {shouldShowEmbed && !youtubeId && !isImage && !thumbnailUrl && card.embed_code && (
               <div
                 className="w-full overflow-hidden max-h-64"
                 dangerouslySetInnerHTML={{ __html: card.embed_code as string }}

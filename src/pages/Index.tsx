@@ -228,7 +228,13 @@ const Index = () => {
             <div className="columns-1 sm:columns-2 lg:columns-3 gap-4 space-y-4">
               {filteredCards.map((card, i) => (
                 <div key={card.id} className="break-inside-avoid">
-                  <KnowledgeCard card={card} index={i} isOwner={true} userId={user?.uid} />
+                  <KnowledgeCard 
+                    card={card} 
+                    index={i} 
+                    isOwner={true} 
+                    userId={user?.uid} 
+                    embedPreference={profile?.embed_preference || "on"}
+                  />
                 </div>
               ))}
             </div>
