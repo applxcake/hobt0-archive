@@ -5,6 +5,10 @@
       "destination": "/api/card-og"
     },
     {
+      "source": "/u/([^/]+)",
+      "destination": "/api/card-og"
+    },
+    {
       "source": "/(.*)",
       "destination": "/index.html"
     }

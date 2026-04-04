@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { Database, ArrowLeft, Loader2, Copy, User, Check, X } from "lucide-react";
+import { Database, ArrowLeft, Loader2, User, Check, X, Share2, Lock, Unlock } from "lucide-react";
 
 const PROFILE_CACHE_KEY = "hobt0_profile_v1";
 
@@ -56,21 +56,19 @@ const Settings = () => {
     display_name: "",
     avatar_url: "",
     bio: "",
-    embed_preference: "on", // "on" | "off" | "manual"
+    embed_preference: "on",
+    is_public: true,
   });
 
-  // Username availability check
   const [usernameStatus, setUsernameStatus] = useState<"idle" | "checking" | "available" | "taken">("idle");
   const [cooldownInfo, setCooldownInfo] = useState<{ allowed: boolean; daysRemaining: number }>({ allowed: true, daysRemaining: 0 });
 
-  // Load profile - cache first, then Firestore
   useEffect(() => {
     if (!user?.uid) {
       setIsLoading(false);
       return;
     }
 
-    // Instant cache load
     const cached = getCachedProfile(user.uid);
     if (cached) {
       setProfile({
@@ -79,11 +77,11 @@ const Settings = () => {
         avatar_url: cached.avatar_url || "",
         bio: cached.bio || "",
         embed_preference: cached.embed_preference || "on",
+        is_public: cached.is_public !== false,
       });
       setIsLoading(false);
     }
 
-    // Then fetch from Firestore
     const loadProfile = async () => {
       try {
         const ref = doc(db, "profiles", user.uid);
@@ -96,12 +94,11 @@ const Settings = () => {
             avatar_url: data.avatar_url || "",
             bio: data.bio || "",
             embed_preference: data.embed_preference || "on",
+            is_public: data.is_public !== false,
           };
           setProfile(loaded);
           setOriginalProfile(data);
           setCachedProfile(user.uid, data);
-          
-          // Check cooldown
           const cooldown = canChangeUsername(data.last_username_change);
           setCooldownInfo(cooldown);
         }
@@ -115,7 +112,6 @@ const Settings = () => {
     loadProfile();
   }, [user?.uid]);
 
-  // Check username availability
   const checkUsernameAvailability = async (username: string) => {
     if (!username || username === originalProfile?.username) {
       setUsernameStatus("idle");
@@ -137,7 +133,6 @@ const Settings = () => {
     }
   };
 
-  // Optimistic save - don't wait for Firestore
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) {
@@ -145,11 +140,9 @@ const Settings = () => {
       return;
     }
 
-    // Check if username changed
     const isUsernameChanged = profile.username !== originalProfile?.username;
     
     if (isUsernameChanged) {
-      // Check cooldown
       if (!cooldownInfo.allowed) {
         toast({ 
           title: "Username cooldown", 
@@ -159,7 +152,6 @@ const Settings = () => {
         return;
       }
       
-      // Check availability
       const isAvailable = await checkUsernameAvailability(profile.username);
       if (!isAvailable) {
         toast({ title: "Username taken", description: "This username is already in use", variant: "destructive" });
@@ -167,7 +159,6 @@ const Settings = () => {
       }
     }
 
-    // Optimistic - update cache immediately
     const data: any = {
       user_id: user.uid,
       username: profile.username || null,
@@ -175,29 +166,24 @@ const Settings = () => {
       avatar_url: profile.avatar_url || null,
       bio: profile.bio || null,
       embed_preference: profile.embed_preference || "on",
+      is_public: profile.is_public,
       updated_at: new Date().toISOString(),
     };
     
-    // Update last_username_change if username changed
     if (isUsernameChanged) {
       data.last_username_change = new Date().toISOString();
     }
     
     setCachedProfile(user.uid, data);
     setIsSaving(true);
-    
-    // Update original profile
     setOriginalProfile({ ...originalProfile, ...data });
     
-    // Update cooldown info if username changed
     if (isUsernameChanged) {
       setCooldownInfo({ allowed: false, daysRemaining: 7 });
     }
     
-    // Show success immediately (don't wait)
     toast({ title: "Profile saved" });
 
-    // Background Firestore write with timeout
     const saveWithTimeout = async () => {
       const profileRef = doc(collection(db, "profiles"), user.uid);
       await setDoc(profileRef, data, { merge: true });
@@ -222,9 +208,19 @@ const Settings = () => {
   };
 
   const copyPublicUrl = () => {
+    if (!profile.is_public) {
+      toast({ 
+        title: "Profile is private", 
+        description: "Make your profile public to share it",
+        variant: "destructive"
+      });
+      return;
+    }
     if (profile.username) {
       navigator.clipboard.writeText(`${window.location.origin}/u/${profile.username}`);
       toast({ title: "Copied!", description: "Public profile URL copied to clipboard" });
+    } else {
+      toast({ title: "Set username first", description: "You need a username to share your profile", variant: "destructive" });
     }
   };
 
@@ -291,7 +287,7 @@ const Settings = () => {
               </div>
               {profile.username && (
                 <Button type="button" variant="ghost" size="sm" onClick={copyPublicUrl}>
-                  <Copy className="w-3.5 h-3.5" />
+                  <Share2 className="w-3.5 h-3.5" />
                 </Button>
               )}
             </div>
@@ -302,6 +298,43 @@ const Settings = () => {
                 {usernameStatus === "taken" && <span className="text-destructive ml-2">Taken</span>}
               </p>
             )}
+          </div>
+
+          <div className="space-y-3 pt-2 border-t border-border">
+            <label className="text-[10px] uppercase tracking-wider text-muted-foreground">
+              Profile Privacy
+            </label>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => setProfile({ ...profile, is_public: true })}
+                className={`px-3 py-1.5 text-xs uppercase tracking-wider rounded-sm border transition-colors ${
+                  profile.is_public
+                    ? "bg-primary text-primary-foreground border-primary"
+                    : "bg-secondary text-muted-foreground border-border hover:text-foreground"
+                }`}
+              >
+                <Unlock className="w-3 h-3 inline mr-1" />
+                Public
+              </button>
+              <button
+                type="button"
+                onClick={() => setProfile({ ...profile, is_public: false })}
+                className={`px-3 py-1.5 text-xs uppercase tracking-wider rounded-sm border transition-colors ${
+                  !profile.is_public
+                    ? "bg-primary text-primary-foreground border-primary"
+                    : "bg-secondary text-muted-foreground border-border hover:text-foreground"
+                }`}
+              >
+                <Lock className="w-3 h-3 inline mr-1" />
+                Private
+              </button>
+            </div>
+            <p className="text-[10px] text-muted-foreground/70">
+              {profile.is_public 
+                ? "Anyone can view your public profile and shared cards" 
+                : "Only you can see your profile. Shared cards still work individually."}
+            </p>
           </div>
 
           <div className="space-y-2">

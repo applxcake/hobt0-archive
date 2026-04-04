@@ -1,12 +1,14 @@
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { collection, query, where, getDocs } from "firebase/firestore";
 import { db } from "@/integrations/firebase/client";
 import KnowledgeCard from "@/components/KnowledgeCard";
-import { Database, Loader2, User } from "lucide-react";
+import { Database, Loader2, User, Lock, ArrowLeft } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 const PublicProfile = () => {
   const { username } = useParams<{ username: string }>();
+  const navigate = useNavigate();
 
   const { data: profile, isLoading: profileLoading } = useQuery<any>({
     queryKey: ["profile", username],
@@ -35,7 +37,7 @@ const PublicProfile = () => {
       const snap = await getDocs(q);
       return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
     },
-    enabled: !!profile?.user_id,
+    enabled: !!profile?.user_id && profile?.is_public !== false,
   });
 
   const isLoading = profileLoading || cardsLoading;
@@ -52,6 +54,32 @@ const PublicProfile = () => {
     return (
       <div className="min-h-screen scanline flex items-center justify-center">
         <p className="text-sm text-muted-foreground">User not found</p>
+      </div>
+    );
+  }
+
+  // Check if profile is private
+  if (profile.is_public === false) {
+    return (
+      <div className="min-h-screen scanline">
+        <div className="grid-pattern fixed inset-0 pointer-events-none opacity-40" />
+        <div className="relative z-10 min-h-screen flex items-center justify-center p-4">
+          <div className="max-w-md w-full text-center">
+            <div className="w-16 h-16 rounded-sm bg-secondary border border-border flex items-center justify-center mx-auto mb-6">
+              <Lock className="w-8 h-8 text-muted-foreground" />
+            </div>
+            <h1 className="text-lg font-bold tracking-tight text-foreground mb-2">
+              Private Profile
+            </h1>
+            <p className="text-sm text-muted-foreground mb-6">
+              This user has made their profile private.
+            </p>
+            <Button onClick={() => navigate("/")} variant="outline" className="gap-2">
+              <ArrowLeft className="w-4 h-4" />
+              Go Home
+            </Button>
+          </div>
+        </div>
       </div>
     );
   }
