@@ -74,6 +74,7 @@ const AddCardDialog = ({ onCardAdded }: AddCardDialogProps) => {
   const [embedPreference, setEmbedPreference] = useState<"on" | "off" | "manual">("on");
   const [collections, setCollections] = useState<Array<{id: string; name: string}>>([]);
   const [selectedCollectionId, setSelectedCollectionId] = useState<string>("");
+  const [duplicateCheck, setDuplicateCheck] = useState<{isDuplicate: boolean; existingCard?: any}>({ isDuplicate: false });
   const { toast } = useToast();
   const { user } = useAuth();
   const queryClient = useQueryClient();
@@ -101,9 +102,48 @@ const AddCardDialog = ({ onCardAdded }: AddCardDialogProps) => {
     loadPreferenceAndCollections();
   }, [user?.uid]);
 
+  // Reset duplicate check when dialog closes
+  useEffect(() => {
+    if (!open) {
+      setDuplicateCheck({ isDuplicate: false });
+    }
+  }, [open]);
+
   // Detect YouTube URLs
   const isYouTubeUrl = (url: string): boolean => {
     return YOUTUBE_REGEX.test(url);
+  };
+
+  // Check for duplicate URLs
+  const checkForDuplicate = async (targetUrl: string) => {
+    if (!user?.uid || !targetUrl.trim()) {
+      setDuplicateCheck({ isDuplicate: false });
+      return;
+    }
+    
+    try {
+      // Normalize URL for comparison
+      const normalizedUrl = targetUrl.trim().toLowerCase().replace(/\/$/, "");
+      const q = query(
+        collection(db, "cards"), 
+        where("user_id", "==", user.uid)
+      );
+      const snap = await getDocs(q);
+      
+      const existing = snap.docs.find(d => {
+        const cardUrl = d.data().url?.toLowerCase().replace(/\/$/, "");
+        return cardUrl === normalizedUrl || cardUrl === normalizedUrl + "/";
+      });
+      
+      if (existing) {
+        setDuplicateCheck({ isDuplicate: true, existingCard: { id: existing.id, ...existing.data() } });
+      } else {
+        setDuplicateCheck({ isDuplicate: false });
+      }
+    } catch (err) {
+      console.error("Duplicate check failed:", err);
+      setDuplicateCheck({ isDuplicate: false });
+    }
   };
 
   const fetchWithTimeout = async (
@@ -438,13 +478,27 @@ const AddCardDialog = ({ onCardAdded }: AddCardDialogProps) => {
               if (newUrl.includes(".")) {
                 const patterns = getPatternsForDomain(newUrl);
                 setSimilarPatterns(patterns);
+                // Check for duplicates
+                checkForDuplicate(newUrl);
               } else {
                 setSimilarPatterns([]);
+                setDuplicateCheck({ isDuplicate: false });
               }
             }}
             required
             className="bg-secondary border-border text-foreground placeholder:text-muted-foreground text-sm"
           />
+          
+          {/* Duplicate warning */}
+          {duplicateCheck.isDuplicate && (
+            <div className="p-3 bg-destructive/10 border border-destructive/30 rounded-sm">
+              <p className="text-xs text-destructive font-medium mb-1">⚠️ Already archived</p>
+              <p className="text-[10px] text-muted-foreground">
+                "{duplicateCheck.existingCard?.title || duplicateCheck.existingCard?.url}" was added on {" "}
+                {duplicateCheck.existingCard?.created_at?.toDate?.().toLocaleDateString?.() || "unknown date"}.
+              </p>
+            </div>
+          )}
           <Input
             type="text"
             placeholder="Title (optional - will auto-fetch if empty)..."
