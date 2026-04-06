@@ -11,6 +11,7 @@ import PublicProfile from "./pages/PublicProfile";
 import CardView from "./pages/CardView";
 import Collections from "./pages/Collections";
 import CollectionView from "./pages/CollectionView";
+import Analytics from "./pages/Analytics";
 import NotFound from "./pages/NotFound";
 import GeminiTest from "./test/GeminiTest";
 
@@ -29,6 +30,7 @@ const App = () => (
             <Route path="/settings" element={<Settings />} />
             <Route path="/collections" element={<Collections />} />
             <Route path="/collection/:collectionId" element={<CollectionView />} />
+            <Route path="/analytics" element={<Analytics />} />
             <Route path="/u/:username" element={<PublicProfile />} />
             <Route path="/card/:cardId" element={<CardView />} />
             <Route path="/test/gemini" element={<GeminiTest />} />

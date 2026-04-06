@@ -5,6 +5,7 @@ import { db } from "@/integrations/firebase/client";
 import { Database, Lock, ArrowLeft, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
+import RelatedCards from "@/components/RelatedCards";
 
 interface Card {
   id: string;
@@ -281,6 +282,14 @@ const CardView = () => {
                 </div>
                 <span className="text-muted-foreground/60">via hobt0</span>
               </div>
+
+              {/* Related Cards */}
+              <RelatedCards 
+                currentCardId={card.id}
+                tags={tags}
+                title={card.title || card.url}
+                summary={summaryParagraph}
+              />
             </div>
           </div>
 
