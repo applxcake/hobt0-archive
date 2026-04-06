@@ -8,6 +8,7 @@ export { db, doc, setDoc, deleteDoc, updateDoc, Timestamp };
 
 import KnowledgeCard from "@/components/KnowledgeCard";
 import AddCardDialog from "@/components/AddCardDialog";
+import RSSManager from "@/components/RSSManager";
 import { Database, Loader2, Settings, LogIn, Share2, Search, Folder, BarChart3 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -193,6 +194,7 @@ const Index = () => {
                   <Folder className="w-3.5 h-3.5" />
                   <span className="hidden sm:inline">Collections</span>
                 </Button>
+                <RSSManager />
                 <Button variant="ghost" size="sm" onClick={() => navigate("/analytics")} className="gap-1.5 text-xs">
                   <BarChart3 className="w-3.5 h-3.5" />
                   <span className="hidden sm:inline">Analytics</span>

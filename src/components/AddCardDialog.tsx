@@ -295,6 +295,7 @@ const AddCardDialog = ({ onCardAdded }: AddCardDialogProps) => {
       is_public: false,
       show_embed: embedPreference === "manual" ? showEmbed : embedPreference === "on",
       collection_id: selectedCollectionId || null,
+      archived_content: null, // Will be populated by background archival
       created_at: Timestamp.now(),
     };
 
@@ -430,6 +431,15 @@ const AddCardDialog = ({ onCardAdded }: AddCardDialogProps) => {
         read_time: data.read_time || estimateReadTime(data.summary_text),
       });
       console.log("[BG] Card updated with AI summary");
+      
+      // Also save archived content if available
+      if (pageContent) {
+        await updateDoc(cardRef, {
+          archived_content: pageContent.slice(0, 50000), // Limit to 50KB
+          archived_at: Timestamp.now(),
+        });
+        console.log("[BG] Full page content archived");
+      }
       
       // Update local cache
       const STORAGE_KEY = "hobt0_cards_v1";
