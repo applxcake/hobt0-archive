@@ -49,6 +49,7 @@ const Index = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [profile, setProfile] = useState<any>(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const [readingFilter, setReadingFilter] = useState<"all" | "unread" | "reading" | "completed">("all");
 
   // Subscribe to real-time updates (faster than getDocs)
   useEffect(() => {
@@ -128,17 +129,26 @@ const Index = () => {
   // Show content immediately if we have cached data
   const showContent = !isLoading || cards.length > 0;
 
-  // Filter cards based on search query
-  const filteredCards = searchQuery.trim()
-    ? cards.filter((card) => {
-        const query = searchQuery.toLowerCase();
-        const urlMatch = card.url?.toLowerCase().includes(query);
-        const summaryMatch = card.summary_text?.toLowerCase().includes(query);
-        const titleMatch = card.title?.toLowerCase().includes(query);
-        const tagsMatch = card.tags?.some((tag: string) => tag.toLowerCase().includes(query));
-        return urlMatch || summaryMatch || titleMatch || tagsMatch;
-      })
-    : cards;
+  // Filter cards based on search query and reading status
+  const filteredCards = cards.filter((card) => {
+    // Search filter
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      const urlMatch = card.url?.toLowerCase().includes(query);
+      const summaryMatch = card.summary_text?.toLowerCase().includes(query);
+      const titleMatch = card.title?.toLowerCase().includes(query);
+      const tagsMatch = card.tags?.some((tag: string) => tag.toLowerCase().includes(query));
+      if (!(urlMatch || summaryMatch || titleMatch || tagsMatch)) return false;
+    }
+    
+    // Reading status filter
+    if (readingFilter !== "all") {
+      const status = card.reading_status || "unread";
+      if (status !== readingFilter) return false;
+    }
+    
+    return true;
+  });
 
   return (
     <div className="min-h-screen scanline">
@@ -199,6 +209,25 @@ const Index = () => {
             )}
           </div>
         </header>
+
+        {/* Reading Status Filter */}
+        {user && (
+          <div className="flex gap-2 mb-6">
+            {["all", "unread", "reading", "completed"].map((filter) => (
+              <button
+                key={filter}
+                onClick={() => setReadingFilter(filter as any)}
+                className={`px-3 py-1.5 text-[10px] uppercase tracking-wider rounded-sm border transition-colors ${
+                  readingFilter === filter
+                    ? "bg-primary text-primary-foreground border-primary"
+                    : "bg-secondary text-muted-foreground border-border hover:text-foreground"
+                }`}
+              >
+                {filter === "all" ? "All" : filter}
+              </button>
+            ))}
+          </div>
+        )}
 
         {/* Content - show immediately from cache */}
         <div className="flex-1">

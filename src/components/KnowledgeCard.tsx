@@ -33,6 +33,7 @@ type Card = {
   is_public?: boolean;
   show_embed?: boolean | null;
   read_time?: number | null;
+  reading_status?: "unread" | "reading" | "completed" | null;
 };
 
 interface KnowledgeCardProps {
@@ -181,6 +182,8 @@ const KnowledgeCard = ({ card, index, isOwner = false, userId, embedPreference =
   const [isToggling, setIsToggling] = useState(false);
   const [isPublic, setIsPublic] = useState(card.is_public ?? false);
   const [isDeleted, setIsDeleted] = useState(false);
+  const [readingStatus, setReadingStatus] = useState<"unread" | "reading" | "completed">(card.reading_status || "unread");
+  const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
   
   // Edit node dialog - now allows editing title, url, summary, tags, and show_embed
   const [editDialogOpen, setEditDialogOpen] = useState(false);
@@ -297,6 +300,35 @@ const KnowledgeCard = ({ card, index, isOwner = false, userId, embedPreference =
     const shareUrl = `${window.location.origin}/card/${card.id}`;
     navigator.clipboard.writeText(shareUrl);
     toast({ title: "Link copied", description: "Anyone can now view this card with this link." });
+  };
+
+  const updateReadingStatus = async (status: "unread" | "reading" | "completed") => {
+    if (!userId) return;
+    setIsUpdatingStatus(true);
+    setReadingStatus(status);
+    
+    // Update local cache immediately
+    const STORAGE_KEY = "hobt0_cards_v1";
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (parsed.userId === userId) {
+        const updated = parsed.cards.map((c: any) => 
+          c.id === card.id ? { ...c, reading_status: status } : c
+        );
+        localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...parsed, cards: updated }));
+      }
+    }
+    
+    // Background Firestore write
+    try {
+      const cardRef = doc(db, "cards", card.id);
+      await updateDoc(cardRef, { reading_status: status });
+    } catch (err) {
+      console.error("Failed to update reading status:", err);
+    } finally {
+      setIsUpdatingStatus(false);
+    }
   };
 
   const saveEditedNode = async () => {
@@ -535,14 +567,56 @@ const KnowledgeCard = ({ card, index, isOwner = false, userId, embedPreference =
           )}
 
           {/* Footer */}
-          <div className="flex items-center gap-3 text-[10px] text-muted-foreground uppercase tracking-wider">
-            {card.embed_type && (
-              <span className="text-primary">{card.embed_type}</span>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3 text-[10px] text-muted-foreground uppercase tracking-wider">
+              {card.embed_type && (
+                <span className="text-primary">{card.embed_type}</span>
+              )}
+              <span className="flex items-center gap-1">
+                <Calendar className="w-3 h-3" />
+                {date}
+              </span>
+            </div>
+            {isOwner && (
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={() => updateReadingStatus("unread")}
+                  disabled={isUpdatingStatus}
+                  className={`px-2 py-0.5 text-[10px] uppercase tracking-wider rounded-sm border transition-colors ${
+                    readingStatus === "unread"
+                      ? "bg-primary text-primary-foreground border-primary"
+                      : "bg-secondary text-muted-foreground border-border hover:text-foreground"
+                  }`}
+                  title="Mark as unread"
+                >
+                  Unread
+                </button>
+                <button
+                  onClick={() => updateReadingStatus("reading")}
+                  disabled={isUpdatingStatus}
+                  className={`px-2 py-0.5 text-[10px] uppercase tracking-wider rounded-sm border transition-colors ${
+                    readingStatus === "reading"
+                      ? "bg-primary text-primary-foreground border-primary"
+                      : "bg-secondary text-muted-foreground border-border hover:text-foreground"
+                  }`}
+                  title="Mark as reading"
+                >
+                  Reading
+                </button>
+                <button
+                  onClick={() => updateReadingStatus("completed")}
+                  disabled={isUpdatingStatus}
+                  className={`px-2 py-0.5 text-[10px] uppercase tracking-wider rounded-sm border transition-colors ${
+                    readingStatus === "completed"
+                      ? "bg-primary text-primary-foreground border-primary"
+                      : "bg-secondary text-muted-foreground border-border hover:text-foreground"
+                  }`}
+                  title="Mark as completed"
+                >
+                  Done
+                </button>
+              </div>
             )}
-            <span className="flex items-center gap-1">
-              <Calendar className="w-3 h-3" />
-              {date}
-            </span>
           </div>
         </div>
       </div>
