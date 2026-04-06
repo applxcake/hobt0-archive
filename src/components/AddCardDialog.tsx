@@ -89,6 +89,10 @@ const AddCardDialog = ({ onCardAdded }: AddCardDialogProps) => {
         if (snap.exists()) {
           const data = snap.data();
           setEmbedPreference(data.embed_preference || "on");
+          // Set default collection if configured
+          if (data.default_collection_id) {
+            setSelectedCollectionId(data.default_collection_id);
+          }
         }
         // Load collections
         const colQuery = query(collection(db, "collections"), where("user_id", "==", user.uid));

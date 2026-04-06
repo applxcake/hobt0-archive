@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { Database, ArrowLeft, Loader2, User, Check, X, Share2, Lock, Unlock } from "lucide-react";
+import { Database, ArrowLeft, Loader2, User, Check, X, Share2, Lock, Unlock, Folder } from "lucide-react";
 import ImportExportDialog from "@/components/ImportExportDialog";
 
 const PROFILE_CACHE_KEY = "hobt0_profile_v1";
@@ -59,7 +59,9 @@ const Settings = () => {
     bio: "",
     embed_preference: "on",
     is_public: true,
+    default_collection_id: "",
   });
+  const [collections, setCollections] = useState<Array<{id: string; name: string}>>([]);
 
   const [usernameStatus, setUsernameStatus] = useState<"idle" | "checking" | "available" | "taken">("idle");
   const [cooldownInfo, setCooldownInfo] = useState<{ allowed: boolean; daysRemaining: number }>({ allowed: true, daysRemaining: 0 });
@@ -79,6 +81,7 @@ const Settings = () => {
         bio: cached.bio || "",
         embed_preference: cached.embed_preference || "on",
         is_public: cached.is_public !== false,
+        default_collection_id: cached.default_collection_id || "",
       });
       setIsLoading(false);
     }
@@ -96,6 +99,7 @@ const Settings = () => {
             bio: data.bio || "",
             embed_preference: data.embed_preference || "on",
             is_public: data.is_public !== false,
+            default_collection_id: data.default_collection_id || "",
           };
           setProfile(loaded);
           setOriginalProfile(data);
@@ -103,6 +107,12 @@ const Settings = () => {
           const cooldown = canChangeUsername(data.last_username_change);
           setCooldownInfo(cooldown);
         }
+
+        // Load collections
+        const colQuery = query(collection(db, "collections"), where("user_id", "==", user.uid));
+        const colSnap = await getDocs(colQuery);
+        const cols = colSnap.docs.map(d => ({ id: d.id, name: d.data().name }));
+        setCollections(cols);
       } catch (err) {
         console.error("[Settings] Load failed:", err);
       } finally {
@@ -168,6 +178,7 @@ const Settings = () => {
       bio: profile.bio || null,
       embed_preference: profile.embed_preference || "on",
       is_public: profile.is_public,
+      default_collection_id: profile.default_collection_id || null,
       updated_at: new Date().toISOString(),
     };
     
@@ -418,6 +429,26 @@ const Settings = () => {
               {profile.embed_preference === "on" && "Embeds will be shown for all cards"}
               {profile.embed_preference === "off" && "Embeds will be hidden for all cards"}
               {profile.embed_preference === "manual" && "You can toggle embeds per card when adding or editing"}
+            </p>
+          </div>
+
+          <div className="space-y-3 pt-2 border-t border-border">
+            <label className="text-[10px] uppercase tracking-wider text-muted-foreground flex items-center gap-1">
+              <Folder className="w-3 h-3" />
+              Default Collection
+            </label>
+            <select
+              value={profile.default_collection_id}
+              onChange={(e) => setProfile({ ...profile, default_collection_id: e.target.value })}
+              className="w-full bg-secondary border border-border text-foreground text-sm rounded-md px-3 py-2"
+            >
+              <option value="">No default (choose per card)</option>
+              {collections.map((col) => (
+                <option key={col.id} value={col.id}>{col.name}</option>
+              ))}
+            </select>
+            <p className="text-[10px] text-muted-foreground/70">
+              New cards will be automatically added to this collection
             </p>
           </div>
 
