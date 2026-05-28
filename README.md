@@ -1,3 +1,1 @@
-# Welcome to your Lovable project
-
-TODO: Document your project here
+Friendly website for students to bookmark their useful links
