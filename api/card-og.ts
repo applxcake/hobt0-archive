@@ -103,7 +103,7 @@ async function handleProfileShare(username: string, projectId: string): Promise<
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>${displayName} (@${username}) — hobt0</title>
+  <title>${displayName} (@${username}) - hobt0</title>
   <meta name="description" content="${bio.slice(0, 160).replace(/"/g, '&quot;') || `Check out ${displayName}'s knowledge archive on hobt0`}" />
   <meta name="theme-color" content="#0a0a0a" />
   
@@ -165,11 +165,11 @@ async function handleCollectionShare(collectionId: string, projectId: string): P
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>${name} — hobt0 Collection</title>
+  <title>${name} - hobt0 Collection</title>
   <meta name="description" content="${description.slice(0, 160).replace(/"/g, '&quot;') || `A collection of ${cardCount} saved items on hobt0`}" />
   <meta name="theme-color" content="#0a0a0a" />
   
-  <meta property="og:title" content="${name} — Collection" />
+  <meta property="og:title" content="${name} - Collection" />
   <meta property="og:description" content="${description.slice(0, 200).replace(/"/g, '&quot;') || `A collection of ${cardCount} saved items on hobt0`}" />
   <meta property="og:type" content="article" />
   <meta property="og:url" content="https://hobt0.tech/collection/${collectionId}" />
@@ -177,7 +177,7 @@ async function handleCollectionShare(collectionId: string, projectId: string): P
   <meta property="og:site_name" content="hobt0" />
   
   <meta name="twitter:card" content="summary_large_image" />
-  <meta name="twitter:title" content="${name} — Collection" />
+  <meta name="twitter:title" content="${name} - Collection" />
   <meta name="twitter:description" content="${description.slice(0, 200).replace(/"/g, '&quot;') || `A collection of ${cardCount} saved items on hobt0`}" />
   <meta name="twitter:image" content="https://hobt0.tech/og-image.png" />
 </head>
@@ -231,7 +231,7 @@ async function handleCardShare(cardId: string, projectId: string): Promise<Respo
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>${title} — hobt0</title>
+  <title>${title} - hobt0</title>
   <meta name="description" content="${truncateAtWord(summary, 160).replace(/"/g, '&quot;')}" />
   <meta name="theme-color" content="#0a0a0a" />
   
