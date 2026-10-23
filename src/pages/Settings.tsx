@@ -7,8 +7,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { Database, ArrowLeft, Loader2, User, Check, X, Share2, Lock, Unlock, Folder } from "lucide-react";
+import { Database, ArrowLeft, Loader2, User, Check, X, Share2, Lock, Unlock, Folder, Palette } from "lucide-react";
 import ImportExportDialog from "@/components/ImportExportDialog";
+import { useTheme } from "@/hooks/use-theme";
 
 const PROFILE_CACHE_KEY = "hobt0_profile_v1";
 
@@ -48,6 +49,7 @@ const Settings = () => {
   const { user, loading: authLoading, signOut } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { theme, setTheme, themes } = useTheme();
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [originalProfile, setOriginalProfile] = useState<any>(null);
@@ -449,6 +451,42 @@ const Settings = () => {
             </select>
             <p className="text-[10px] text-muted-foreground/70">
               New cards will be automatically added to this collection
+            </p>
+          </div>
+
+          <div className="space-y-3 pt-2 border-t border-border">
+            <label className="text-[10px] uppercase tracking-wider text-muted-foreground flex items-center gap-1">
+              <Palette className="w-3 h-3" />
+              Terminal Theme
+            </label>
+            <div className="grid grid-cols-2 gap-2">
+              {themes.map((t) => (
+                <button
+                  key={t.id}
+                  type="button"
+                  onClick={() => setTheme(t.id)}
+                  className={`flex items-center justify-between p-2.5 rounded-sm border text-left transition-all ${
+                    theme === t.id
+                      ? "border-primary bg-primary/10 text-foreground"
+                      : "border-border bg-secondary/50 text-muted-foreground hover:border-primary/40 hover:text-foreground"
+                  }`}
+                >
+                  <div className="flex items-center gap-2">
+                    <span
+                      className="w-3.5 h-3.5 rounded-full border border-white/20 shrink-0"
+                      style={{ backgroundColor: t.color }}
+                    />
+                    <div>
+                      <div className="text-xs font-mono font-medium">{t.name}</div>
+                      <div className="text-[9px] text-muted-foreground/70">{t.description}</div>
+                    </div>
+                  </div>
+                  {theme === t.id && <Check className="w-3.5 h-3.5 text-primary shrink-0" />}
+                </button>
+              ))}
+            </div>
+            <p className="text-[10px] text-muted-foreground/70">
+              Select your preferred visual aesthetic and CRT glow
             </p>
           </div>
 
