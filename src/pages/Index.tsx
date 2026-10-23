@@ -9,7 +9,9 @@ export { db, doc, setDoc, deleteDoc, updateDoc, Timestamp };
 import KnowledgeCard from "@/components/KnowledgeCard";
 import AddCardDialog from "@/components/AddCardDialog";
 import RSSManager from "@/components/RSSManager";
-import { Database, Loader2, Settings, LogIn, Share2, Search, Folder, BarChart3 } from "lucide-react";
+import { ThemeSelector } from "@/components/ThemeSelector";
+import { CommandMenu } from "@/components/CommandMenu";
+import { Database, Loader2, Settings, LogIn, Share2, Search, Folder, BarChart3, Tag } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -51,6 +53,8 @@ const Index = () => {
   const [profile, setProfile] = useState<any>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [readingFilter, setReadingFilter] = useState<"all" | "unread" | "reading" | "completed">("all");
+  const [selectedTag, setSelectedTag] = useState<string | null>(null);
+  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
 
   // Subscribe to real-time updates (faster than getDocs)
   useEffect(() => {
@@ -130,8 +134,20 @@ const Index = () => {
   // Show content immediately if we have cached data
   const showContent = !isLoading || cards.length > 0;
 
-  // Filter cards based on search query and reading status
+  // Collect top tags
+  const allTags = Array.from(
+    new Set(
+      cards.flatMap((c) => (Array.isArray(c.tags) ? c.tags : [])).filter(Boolean)
+    )
+  ).slice(0, 10);
+
+  // Filter cards based on search query, reading status, and selected tag
   const filteredCards = cards.filter((card) => {
+    // Tag filter
+    if (selectedTag && !card.tags?.includes(selectedTag)) {
+      return false;
+    }
+
     // Search filter
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase();
@@ -172,20 +188,23 @@ const Index = () => {
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3">
+            <CommandMenu onOpenAddCard={() => setIsAddDialogOpen(true)} cards={cards} />
+            <ThemeSelector />
+
             {user && (
-              <div className="relative hidden sm:block">
+              <div className="relative hidden md:block">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
                 <Input
                   type="text"
                   placeholder="Search nodes..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-48 pl-9 bg-secondary border-border text-foreground text-sm"
+                  className="w-40 lg:w-48 pl-9 bg-secondary border-border text-foreground text-sm"
                 />
               </div>
             )}
-            <span className="text-[10px] uppercase tracking-wider text-muted-foreground">
+            <span className="text-[10px] uppercase tracking-wider text-muted-foreground hidden sm:inline">
               {filteredCards?.length ?? 0} nodes
             </span>
             {user ? (
@@ -202,7 +221,7 @@ const Index = () => {
                 <Button variant="ghost" size="sm" onClick={shareArchive} className="gap-1.5 text-xs">
                   <Share2 className="w-3.5 h-3.5" />
                 </Button>
-                <AddCardDialog onCardAdded={refetch} />
+                <AddCardDialog onCardAdded={refetch} open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen} />
                 <Button variant="ghost" size="sm" onClick={() => navigate("/settings")}>
                   <Settings className="w-4 h-4" />
                 </Button>
@@ -216,22 +235,52 @@ const Index = () => {
           </div>
         </header>
 
-        {/* Reading Status Filter */}
+        {/* Filter bar: Reading status + Quick tag filter */}
         {user && (
-          <div className="flex gap-2 mb-6">
-            {["all", "unread", "reading", "completed"].map((filter) => (
-              <button
-                key={filter}
-                onClick={() => setReadingFilter(filter as any)}
-                className={`px-3 py-1.5 text-[10px] uppercase tracking-wider rounded-sm border transition-colors ${
-                  readingFilter === filter
-                    ? "bg-primary text-primary-foreground border-primary"
-                    : "bg-secondary text-muted-foreground border-border hover:text-foreground"
-                }`}
-              >
-                {filter === "all" ? "All" : filter}
-              </button>
-            ))}
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-6">
+            <div className="flex flex-wrap gap-2">
+              {["all", "unread", "reading", "completed"].map((filter) => (
+                <button
+                  key={filter}
+                  onClick={() => setReadingFilter(filter as any)}
+                  className={`px-3 py-1.5 text-[10px] uppercase tracking-wider rounded-sm border transition-colors ${
+                    readingFilter === filter
+                      ? "bg-primary text-primary-foreground border-primary glow-primary"
+                      : "bg-secondary text-muted-foreground border-border hover:text-foreground hover:border-primary/40"
+                  }`}
+                >
+                  {filter === "all" ? "All Status" : filter}
+                </button>
+              ))}
+            </div>
+
+            {/* Quick Tag Pills */}
+            {allTags.length > 0 && (
+              <div className="flex items-center gap-1.5 overflow-x-auto max-w-full pb-1 sm:pb-0">
+                <Tag className="w-3 h-3 text-muted-foreground shrink-0" />
+                {selectedTag && (
+                  <button
+                    onClick={() => setSelectedTag(null)}
+                    className="px-2 py-0.5 text-[10px] bg-primary/20 text-primary border border-primary rounded-sm font-mono hover:bg-primary/30"
+                  >
+                    Clear #{selectedTag} ✕
+                  </button>
+                )}
+                {allTags.map((tag) => (
+                  <button
+                    key={tag}
+                    onClick={() => setSelectedTag(selectedTag === tag ? null : tag)}
+                    className={`px-2 py-0.5 text-[10px] rounded-sm font-mono border transition-colors shrink-0 ${
+                      selectedTag === tag
+                        ? "bg-primary text-primary-foreground border-primary"
+                        : "bg-secondary/70 text-muted-foreground border-border hover:text-foreground hover:border-primary/50"
+                    }`}
+                  >
+                    #{tag}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         )}
 

@@ -18,6 +18,8 @@ import { Textarea } from "@/components/ui/textarea";
 
 interface AddCardDialogProps {
   onCardAdded: () => void;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }
 
 const SUMMARY_PATTERNS_KEY = "hobt0_summary_patterns_v1";
@@ -63,8 +65,14 @@ const estimateReadTime = (text: string): number => {
   return Math.max(1, Math.min(30, Math.round(words / 220) || 1));
 };
 
-const AddCardDialog = ({ onCardAdded }: AddCardDialogProps) => {
-  const [open, setOpen] = useState(false);
+const AddCardDialog = ({ onCardAdded, open: controlledOpen, onOpenChange: controlledOnOpenChange }: AddCardDialogProps) => {
+  const [internalOpen, setInternalOpen] = useState(false);
+  const isControlled = controlledOpen !== undefined;
+  const open = isControlled ? controlledOpen : internalOpen;
+  const setOpen = (newOpen: boolean) => {
+    if (controlledOnOpenChange) controlledOnOpenChange(newOpen);
+    if (!isControlled) setInternalOpen(newOpen);
+  };
   const [url, setUrl] = useState("");
   const [customTitle, setCustomTitle] = useState("");
   const [customSummary, setCustomSummary] = useState("");

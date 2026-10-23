@@ -437,7 +437,7 @@ const KnowledgeCard = ({ card, index, isOwner = false, userId, embedPreference =
   return (
     <>
       <div
-        className="group block border border-border bg-card rounded-md overflow-hidden hover:border-primary transition-[border-color] duration-200 animate-fade-in"
+        className="hud-corner group block border border-border bg-card/85 backdrop-blur-sm rounded-md overflow-hidden hover:border-primary/80 hover:shadow-[0_0_20px_hsl(var(--primary)/0.15)] transition-all duration-300 animate-fade-in"
         style={{ 
           backfaceVisibility: 'hidden', 
           WebkitBackfaceVisibility: 'hidden', 

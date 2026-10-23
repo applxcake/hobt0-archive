@@ -5,7 +5,8 @@
 @tailwind utilities;
 
 @layer base {
-  :root {
+  :root,
+  [data-theme="phosphor"] {
     --background: 240 15% 4%;
     --foreground: 160 30% 85%;
 
@@ -48,6 +49,111 @@
     --sidebar-border: 160 20% 12%;
     --sidebar-ring: 160 100% 40%;
   }
+
+  [data-theme="cyberpunk"] {
+    --background: 235 22% 5%;
+    --foreground: 190 60% 90%;
+
+    --card: 235 18% 8%;
+    --card-foreground: 190 40% 85%;
+
+    --popover: 235 18% 8%;
+    --popover-foreground: 190 40% 85%;
+
+    --primary: 188 100% 48%;
+    --primary-foreground: 235 25% 5%;
+
+    --secondary: 235 15% 14%;
+    --secondary-foreground: 190 30% 75%;
+
+    --muted: 235 15% 11%;
+    --muted-foreground: 220 10% 50%;
+
+    --accent: 325 90% 56%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 75% 55%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 188 40% 20%;
+    --input: 235 15% 14%;
+    --ring: 188 100% 48%;
+
+    --radius: 0.375rem;
+
+    --glow-primary: 0 0 22px hsl(188 100% 48% / 0.4);
+    --glow-accent: 0 0 22px hsl(325 90% 56% / 0.4);
+  }
+
+  [data-theme="amber"] {
+    --background: 28 20% 4%;
+    --foreground: 40 50% 85%;
+
+    --card: 28 16% 7%;
+    --card-foreground: 40 40% 80%;
+
+    --popover: 28 16% 7%;
+    --popover-foreground: 40 40% 80%;
+
+    --primary: 38 95% 50%;
+    --primary-foreground: 28 20% 4%;
+
+    --secondary: 28 12% 13%;
+    --secondary-foreground: 40 30% 70%;
+
+    --muted: 28 12% 10%;
+    --muted-foreground: 35 10% 45%;
+
+    --accent: 15 85% 55%;
+    --accent-foreground: 40 100% 92%;
+
+    --destructive: 0 70% 50%;
+    --destructive-foreground: 0 0% 98%;
+
+    --border: 38 35% 18%;
+    --input: 28 12% 13%;
+    --ring: 38 95% 50%;
+
+    --radius: 0.375rem;
+
+    --glow-primary: 0 0 20px hsl(38 95% 50% / 0.35);
+    --glow-accent: 0 0 20px hsl(15 85% 55% / 0.35);
+  }
+
+  [data-theme="matrix"] {
+    --background: 120 15% 3%;
+    --foreground: 120 40% 88%;
+
+    --card: 120 14% 6%;
+    --card-foreground: 120 30% 82%;
+
+    --popover: 120 14% 6%;
+    --popover-foreground: 120 30% 82%;
+
+    --primary: 115 100% 50%;
+    --primary-foreground: 120 20% 4%;
+
+    --secondary: 120 10% 11%;
+    --secondary-foreground: 120 25% 72%;
+
+    --muted: 120 10% 9%;
+    --muted-foreground: 120 10% 45%;
+
+    --accent: 140 80% 45%;
+    --accent-foreground: 120 100% 95%;
+
+    --destructive: 0 70% 50%;
+    --destructive-foreground: 0 0% 98%;
+
+    --border: 115 40% 16%;
+    --input: 120 10% 11%;
+    --ring: 115 100% 50%;
+
+    --radius: 0.375rem;
+
+    --glow-primary: 0 0 22px hsl(115 100% 50% / 0.35);
+    --glow-accent: 0 0 22px hsl(140 80% 45% / 0.35);
+  }
 }
 
 @layer base {
@@ -56,7 +162,7 @@
   }
 
   body {
-    @apply bg-background text-foreground font-mono antialiased;
+    @apply bg-background text-foreground font-mono antialiased selection:bg-primary/20 selection:text-primary;
   }
 }
 
@@ -68,21 +174,52 @@
     box-shadow: var(--glow-accent);
   }
   .text-glow {
-    text-shadow: 0 0 10px hsl(160 100% 40% / 0.5);
+    text-shadow: 0 0 10px hsl(var(--primary) / 0.5);
   }
   .scanline {
     background: repeating-linear-gradient(
       0deg,
       transparent,
       transparent 2px,
-      hsl(160 100% 40% / 0.03) 2px,
-      hsl(160 100% 40% / 0.03) 4px
+      hsl(var(--primary) / 0.03) 2px,
+      hsl(var(--primary) / 0.03) 4px
     );
   }
   .grid-pattern {
     background-image: 
-      linear-gradient(hsl(160 20% 15% / 0.3) 1px, transparent 1px),
-      linear-gradient(90deg, hsl(160 20% 15% / 0.3) 1px, transparent 1px);
+      linear-gradient(hsl(var(--border) / 0.3) 1px, transparent 1px),
+      linear-gradient(90deg, hsl(var(--border) / 0.3) 1px, transparent 1px);
     background-size: 40px 40px;
+  }
+  .hud-corner {
+    position: relative;
+  }
+  .hud-corner::before,
+  .hud-corner::after {
+    content: '';
+    position: absolute;
+    width: 6px;
+    height: 6px;
+    border-color: hsl(var(--primary) / 0.5);
+    pointer-events: none;
+    transition: all 0.2s ease-in-out;
+  }
+  .hud-corner::before {
+    top: 0;
+    left: 0;
+    border-top: 1px solid;
+    border-left: 1px solid;
+  }
+  .hud-corner::after {
+    bottom: 0;
+    right: 0;
+    border-bottom: 1px solid;
+    border-right: 1px solid;
+  }
+  .hud-corner:hover::before,
+  .hud-corner:hover::after {
+    border-color: hsl(var(--primary));
+    width: 8px;
+    height: 8px;
   }
 }
